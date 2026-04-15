@@ -1,0 +1,76 @@
+name: Smart Campus CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # ── Backend: Build & Test ─────────────────────────────────────────
+  backend:
+    name: Backend (Spring Boot)
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build & test with Maven
+        working-directory: backend
+        run: mvn clean verify --no-transfer-progress
+        env:
+          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/smart_campus_ci
+          APP_JWT_SECRET: ci-test-secret-key-that-is-long-enough-for-testing
+          SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: ci-test
+          SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: ci-test
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-report
+          path: backend/target/surefire-reports/
+
+  # ── Frontend: Install, Lint & Build ──────────────────────────────
+  frontend:
+    name: Frontend (React + Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/

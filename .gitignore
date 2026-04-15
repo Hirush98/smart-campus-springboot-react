@@ -1,0 +1,30 @@
+# ── Backend ──────────────────────
+backend/target/
+backend/.mvn/
+backend/*.class
+backend/*.jar
+backend/*.war
+
+# ── Frontend ─────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# ── IDE ──────────────────────────
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user
+
+# ── OS ───────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Secrets (never commit these) ─
+*.env
+application-prod.properties
+
+
+backend/src/main/resources/application.properties
