@@ -7,23 +7,33 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // On mount, check if a token exists and fetch current user
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (token) {
-      api.get('/auth/me')
-        .then(res => setUser(res.data))
-        .catch(() => localStorage.removeItem('token'))
-        .finally(() => setLoading(false))
-    } else {
+
+    // Only call /api/auth/me if a token actually exists in localStorage
+    // Without this guard, every page load fires the request unauthenticated
+    // and the backend (before our fix) redirected it to Google OAuth
+    if (!token) {
       setLoading(false)
+      return
     }
+
+    api.get('/auth/me')
+      .then(res => setUser(res.data))
+      .catch(() => {
+        // Token is invalid or expired — clear it silently
+        localStorage.removeItem('token')
+        setUser(null)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password })
     localStorage.setItem('token', res.data.token)
-    setUser(res.data)
+    // Fetch full user profile after login
+    const meRes = await api.get('/auth/me')
+    setUser(meRes.data)
     return res.data
   }
 
@@ -32,8 +42,8 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
-  const isAdmin       = user?.roles?.some(r => r.authority === 'ROLE_ADMIN')
-  const isTechnician  = user?.roles?.some(r => r.authority === 'ROLE_TECHNICIAN')
+  const isAdmin      = user?.roles?.some(r => r.authority === 'ROLE_ADMIN')
+  const isTechnician = user?.roles?.some(r => r.authority === 'ROLE_TECHNICIAN')
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, isAdmin, isTechnician }}>
