@@ -7,7 +7,9 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @TestPropertySource(properties = {
     "app.jwt.secret=test-secret-key-that-is-long-enough",
-    "app.jwt.expiration-ms=3600000"
+    "app.jwt.expiration-ms=3600000",
+    "app.cors.allowed-origins=http://localhost:3000"
+    
 })
 class SmartCampusApplicationTests {
 
