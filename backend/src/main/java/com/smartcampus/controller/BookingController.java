@@ -51,13 +51,14 @@ public class BookingController {
 
     @PostMapping
     public ResponseEntity<Booking> createBooking(
-            @Valid @RequestBody Booking booking,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        booking.setUserId(principal.getId());
-        booking.setUserName(principal.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(bookingService.createBooking(booking));
-    }
+        @Valid @RequestBody Booking booking,
+        @AuthenticationPrincipal UserPrincipal principal) {
+
+    // ✅ Set userId from JWT token — never trust the client to send this
+    booking.setUserId(principal.getId());
+
+    return ResponseEntity.ok(bookingService.createBooking(booking));
+}
 
     @PatchMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
