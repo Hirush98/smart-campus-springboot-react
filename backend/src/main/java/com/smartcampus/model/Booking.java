@@ -38,7 +38,7 @@ public class Booking {
     private String resourceName; // Denormalized for display
 
     // Reference to the user making the booking
-    @NotNull
+    
     private String userId;
     private String userName; // Denormalized for display
 

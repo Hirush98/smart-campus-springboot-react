@@ -6,10 +6,10 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-    "spring.data.mongodb.uri=mongodb://localhost:27017/smart_campus_test",
-    "app.jwt.secret=test-secret-key-that-is-long-enough-for-testing-purposes-only",
-    "spring.security.oauth2.client.registration.google.client-id=test",
-    "spring.security.oauth2.client.registration.google.client-secret=test"
+    "app.jwt.secret=test-secret-key-that-is-long-enough",
+    "app.jwt.expiration-ms=3600000",
+    "app.cors.allowed-origins=http://localhost:3000"
+    
 })
 class SmartCampusApplicationTests {
 
