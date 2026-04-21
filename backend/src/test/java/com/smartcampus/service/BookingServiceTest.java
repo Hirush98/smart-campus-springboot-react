@@ -162,7 +162,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("Should throw when rejection reason is blank")
     void rejectBooking_blankReason_throwsBadRequest() {
-        when(bookingRepository.findById("booking-1")).thenReturn(Optional.of(savedBooking));
+        
 
         assertThatThrownBy(() -> bookingService.rejectBooking("booking-1", "admin-1", "  "))
                 .isInstanceOf(BadRequestException.class)
