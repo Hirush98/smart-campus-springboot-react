@@ -162,8 +162,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("Should throw when rejection reason is blank")
     void rejectBooking_blankReason_throwsBadRequest() {
-        
-
+        // No stub needed — service validates reason BEFORE querying the database
         assertThatThrownBy(() -> bookingService.rejectBooking("booking-1", "admin-1", "  "))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("rejection reason is required");
