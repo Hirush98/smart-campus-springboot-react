@@ -11,7 +11,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * Module B - Implemented by: Member 2
+ * Module B - Implemented by: Member 1 (team lead)
  */
 @Repository
 public interface BookingRepository extends MongoRepository<Booking, String> {
@@ -20,18 +20,27 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
     List<Booking> findByResourceId(String resourceId);
     List<Booking> findByStatus(BookingStatus status);
     List<Booking> findByUserIdAndStatus(String userId, BookingStatus status);
+    List<Booking> findByStatusAndResourceId(BookingStatus status, String resourceId);
 
-    // Conflict detection: find overlapping bookings for the same resource on the same date
-    // A conflict exists when: existing.startTime < newEndTime AND existing.endTime > newStartTime
-    @Query("{ 'resourceId': ?0, 'bookingDate': ?1, 'status': { $in: ['PENDING', 'APPROVED'] }, " +
+    // Conflict detection: overlapping time slots for same resource on same date
+    // Conflict exists when: existing.startTime < newEndTime AND existing.endTime > newStartTime
+    @Query("{ 'resourceId': ?0, 'bookingDate': ?1, " +
+           "'status': { $in: ['PENDING', 'APPROVED'] }, " +
            "'startTime': { $lt: ?3 }, 'endTime': { $gt: ?2 } }")
-    List<Booking> findConflictingBookings(String resourceId, LocalDate bookingDate,
-                                          LocalTime startTime, LocalTime endTime);
+    List<Booking> findConflictingBookings(
+            String resourceId,
+            LocalDate bookingDate,
+            LocalTime startTime,
+            LocalTime endTime);
 
-    // Same as above but excluding a specific booking ID (for update scenarios)
-    @Query("{ 'resourceId': ?0, 'bookingDate': ?1, 'status': { $in: ['PENDING', 'APPROVED'] }, " +
+    // Same but excludes a specific booking ID (for future update use)
+    @Query("{ 'resourceId': ?0, 'bookingDate': ?1, " +
+           "'status': { $in: ['PENDING', 'APPROVED'] }, " +
            "'startTime': { $lt: ?3 }, 'endTime': { $gt: ?2 }, '_id': { $ne: ?4 } }")
-    List<Booking> findConflictingBookingsExcluding(String resourceId, LocalDate bookingDate,
-                                                    LocalTime startTime, LocalTime endTime,
-                                                    String excludeBookingId);
+    List<Booking> findConflictingBookingsExcluding(
+            String resourceId,
+            LocalDate bookingDate,
+            LocalTime startTime,
+            LocalTime endTime,
+            String excludeId);
 }
