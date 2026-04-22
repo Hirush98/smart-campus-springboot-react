@@ -1,6 +1,8 @@
 package com.smartcampus.config;
 
 import com.smartcampus.security.jwt.JwtAuthenticationFilter;
+import com.smartcampus.security.oauth2.CustomOAuth2UserService;
+import com.smartcampus.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,14 +26,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Module E - Implemented by: Member 4
- *
- * Key fix: separated REST API security (JWT, stateless, returns 401)
- * from OAuth2 browser flow (redirects to Google).
- * The REST API filter chain runs first and never redirects — it
- * returns 401 JSON so Axios can handle it on the frontend.
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -39,6 +33,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOriginsStr;
@@ -49,12 +45,9 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // STATELESS — no sessions, no cookies, JWT only
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // When a request is unauthenticated, return 401 JSON — NOT a redirect to Google
-            // This is the critical fix: without this, Spring redirects API calls to OAuth2 login
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");
@@ -66,30 +59,18 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-                // Fully public — no token needed
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/resources/**").permitAll()
-
-                // OAuth2 redirect endpoints (browser flow only)
-                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
-
-                // Everything else requires a valid JWT
                 .anyRequest().authenticated()
             )
 
-            // OAuth2 login — only used when the browser clicks "Continue with Google"
-            // REST API calls via Axios never hit this; they use the JWT filter instead
             .oauth2Login(oauth2 -> oauth2
-                .authorizationEndpoint(endpoint ->
-                    endpoint.baseUri("/oauth2/authorization"))
-                .redirectionEndpoint(endpoint ->
-                    endpoint.baseUri("/login/oauth2/code/*"))
-                .defaultSuccessUrl("http://localhost:5173/oauth2/callback", true)
-                .failureUrl("http://localhost:5173/login?error=oauth2")
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService)
+                )
+                .successHandler(oAuth2AuthenticationSuccessHandler)
             )
 
-            // JWT filter runs BEFORE Spring's own auth — so token-based requests
-            // are authenticated before any redirect logic can intercept them
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

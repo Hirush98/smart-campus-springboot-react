@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "http://localhost:8081/api",
   headers: { "Content-Type": "application/json" },
 });
 
@@ -55,7 +55,9 @@ export const bookingService = {
 export const ticketService = {
   getAll: () => api.get("/tickets"),
   getById: (id) => api.get(`/tickets/${id}`),
-  create: (data) => api.post("/tickets", data),
+  create: (formData) => api.post("/tickets", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  }),
   updateStatus: (id, s, n) =>
     api.patch(`/tickets/${id}/status`, { status: s, notes: n }),
   assign: (id, techId, techName) =>
