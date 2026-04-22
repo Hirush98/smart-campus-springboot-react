@@ -26,6 +26,7 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final CommentRepository commentRepository;
     private final NotificationService notificationService;
+    private final FileStorageService fileStorageService;
 
     public List<Ticket> getAllTickets() {
         return ticketRepository.findAll();
@@ -44,12 +45,36 @@ public class TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + id));
     }
 
-    public Ticket createTicket(Ticket ticket) {
-        if (ticket.getAttachmentIds() != null && ticket.getAttachmentIds().size() > 3) {
-            throw new BadRequestException("Maximum 3 attachments allowed per ticket");
+    public Ticket createTicket(Ticket ticket, List<org.springframework.web.multipart.MultipartFile> files) {
+        if (files != null && !files.isEmpty()) {
+            if (files.size() > 3) {
+                throw new BadRequestException("Maximum 3 attachments allowed per ticket");
+            }
+            
+            List<String> fileNames = files.stream()
+                    .map(fileStorageService::storeFile)
+                    .toList();
+            ticket.setAttachmentIds(fileNames);
         }
+        
         ticket.setStatus(TicketStatus.OPEN);
         return ticketRepository.save(ticket);
+    }
+
+    public void deleteTicket(String id) {
+        Ticket ticket = getTicketById(id);
+        
+        // Delete physical files
+        if (ticket.getAttachmentIds() != null) {
+            ticket.getAttachmentIds().forEach(fileStorageService::deleteFile);
+        }
+        
+        // Delete comments
+        List<Comment> comments = getCommentsByTicket(id);
+        commentRepository.deleteAll(comments);
+        
+        // Delete ticket
+        ticketRepository.deleteById(id);
     }
 
     public Ticket updateTicketStatus(String id, TicketStatus newStatus,
@@ -121,9 +146,9 @@ public class TicketService {
 
     private void validateStatusTransition(TicketStatus current, TicketStatus next) {
         boolean valid = switch (current) {
-            case OPEN -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED;
-            case IN_PROGRESS -> next == TicketStatus.RESOLVED || next == TicketStatus.REJECTED;
-            case RESOLVED -> next == TicketStatus.CLOSED;
+            case OPEN -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED || next == TicketStatus.CANCELLED;
+            case IN_PROGRESS -> next == TicketStatus.RESOLVED || next == TicketStatus.REJECTED || next == TicketStatus.CANCELLED;
+            case RESOLVED -> next == TicketStatus.CLOSED || next == TicketStatus.CANCELLED;
             default -> false;
         };
         if (!valid) {

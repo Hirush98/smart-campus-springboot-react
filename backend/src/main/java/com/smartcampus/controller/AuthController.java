@@ -48,11 +48,16 @@ public class AuthController {
                     .body(Map.of("message", "Email is already registered"));
         }
 
+        // Simple logic for assignment demo: Assign ADMIN role if email contains 'admin'
+        Set<Role> roles = request.getEmail().toLowerCase().contains("admin") 
+                ? Set.of(Role.ADMIN, Role.USER) 
+                : Set.of(Role.USER);
+
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .roles(Set.of(Role.USER))
+                .roles(roles)
                 .enabled(true)
                 .provider("local")
                 .build();

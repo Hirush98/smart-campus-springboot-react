@@ -74,3 +74,22 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist/
+
+  # ── Deployment: Production Release ──────────────────────────────
+  deploy:
+    name: Deploy to Production (Staging)
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Cloud (Simulated)
+        run: |
+          echo "🚀 Deploying Smart Campus Operations Hub..."
+          echo "Backend: Releasing via Container Registry"
+          echo "Frontend: Deploying to Edge Network"
+          echo "Database: Running Migrations"
+          echo "✅ Deployment Successful!"

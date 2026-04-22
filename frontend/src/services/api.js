@@ -45,7 +45,9 @@ export const bookingService = {
 export const ticketService = {
   getAll:        ()            => api.get('/tickets'),
   getById:       (id)          => api.get(`/tickets/${id}`),
-  create:        (data)        => api.post('/tickets', data),
+  create: (formData) => api.post("/tickets", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  }),
   updateStatus:  (id, s, n)    => api.patch(`/tickets/${id}/status`, { status: s, notes: n }),
   assign:        (id, tId, tN) => api.patch(`/tickets/${id}/assign`, { technicianId: tId, technicianName: tN }),
   getComments:   (id)          => api.get(`/tickets/${id}/comments`),

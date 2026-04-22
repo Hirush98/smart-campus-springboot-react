@@ -12,25 +12,22 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /**
  * Module C - Maintenance & Incident Ticketing
  * Implemented by: Member 3
- *
- * Endpoints:
- *  GET    /api/tickets                        - list tickets
- *  GET    /api/tickets/{id}                   - get one ticket
- *  POST   /api/tickets                        - create ticket
- *  PATCH  /api/tickets/{id}/status            - update status
- *  PATCH  /api/tickets/{id}/assign            - assign technician (ADMIN)
- *  DELETE /api/tickets/{id}                   - delete ticket (ADMIN)
- *  GET    /api/tickets/{id}/comments          - list comments
- *  POST   /api/tickets/{id}/comments          - add comment
- *  PUT    /api/tickets/{id}/comments/{cid}    - edit comment
- *  DELETE /api/tickets/{id}/comments/{cid}    - delete comment
  */
 @RestController
 @RequestMapping("/api/tickets")
@@ -40,35 +37,50 @@ public class TicketController {
     private final TicketService ticketService;
 
     @GetMapping
-    public ResponseEntity<List<Ticket>> getTickets(
+    public ResponseEntity<CollectionModel<EntityModel<Ticket>>> getTickets(
             @AuthenticationPrincipal UserPrincipal principal) {
         boolean isAdmin = principal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         boolean isTechnician = principal.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_TECHNICIAN"));
 
+        List<Ticket> tickets;
         if (isAdmin) {
-            return ResponseEntity.ok(ticketService.getAllTickets());
+            tickets = ticketService.getAllTickets();
+        } else if (isTechnician) {
+            tickets = ticketService.getTicketsByAssignee(principal.getId());
+        } else {
+            tickets = ticketService.getTicketsByUser(principal.getId());
         }
-        if (isTechnician) {
-            return ResponseEntity.ok(ticketService.getTicketsByAssignee(principal.getId()));
-        }
-        return ResponseEntity.ok(ticketService.getTicketsByUser(principal.getId()));
+
+        List<EntityModel<Ticket>> ticketModels = tickets.stream()
+                .map(ticket -> EntityModel.of(ticket,
+                        linkTo(methodOn(TicketController.class).getTicket(ticket.getId())).withSelfRel(),
+                        linkTo(methodOn(TicketController.class).getComments(ticket.getId())).withRel("comments")))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(CollectionModel.of(ticketModels,
+                linkTo(methodOn(TicketController.class).getTickets(principal)).withSelfRel()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Ticket> getTicket(@PathVariable String id) {
-        return ResponseEntity.ok(ticketService.getTicketById(id));
+    public ResponseEntity<EntityModel<Ticket>> getTicket(@PathVariable String id) {
+        Ticket ticket = ticketService.getTicketById(id);
+        return ResponseEntity.ok(EntityModel.of(ticket,
+                linkTo(methodOn(TicketController.class).getTicket(id)).withSelfRel(),
+                linkTo(methodOn(TicketController.class).getTickets(null)).withRel("tickets"),
+                linkTo(methodOn(TicketController.class).getComments(id)).withRel("comments")));
     }
 
-    @PostMapping
+    @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<Ticket> createTicket(
-            @Valid @RequestBody Ticket ticket,
+            @RequestPart("ticket") @Valid Ticket ticket,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
             @AuthenticationPrincipal UserPrincipal principal) {
         ticket.setReportedBy(principal.getId());
         ticket.setReporterName(principal.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ticketService.createTicket(ticket));
+                .body(ticketService.createTicket(ticket, files));
     }
 
     @PatchMapping("/{id}/status")
@@ -96,7 +108,7 @@ public class TicketController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteTicket(@PathVariable String id) {
-        // TODO: implement deleteTicket in service
+        ticketService.deleteTicket(id);
         return ResponseEntity.noContent().build();
     }
 

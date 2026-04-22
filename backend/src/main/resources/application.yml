@@ -1,0 +1,39 @@
+server:
+  port: 8081
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb+srv://admin:Admin12345@cluster0.fkmou3y.mongodb.net/smart_campus?retryWrites=true&w=majority
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 15MB
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: YOUR_GOOGLE_CLIENT_ID
+            client-secret: YOUR_GOOGLE_CLIENT_SECRET
+            scope:
+              - email
+              - profile
+
+  jackson:
+    serialization:
+      write-durations-as-timestamps: false
+
+app:
+  jwt:
+    secret: smartCampusOperationsHubSecretKey2026_it3030_paf_assignment
+    expiration-ms: 86400000
+
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:5174
+
+  upload:
+    dir: uploads/tickets
+    static-path: /api/uploads/**
