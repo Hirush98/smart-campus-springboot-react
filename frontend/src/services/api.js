@@ -46,7 +46,7 @@ export const resourceService = {
       params: { status }
     }),
 
-  // Upload images (multipart) (ADMIN)
+  // Upload images (max 5 images, 5MB each) (multipart) (ADMIN)
   uploadImages: (id, files) => {
     const formData = new FormData();
 
