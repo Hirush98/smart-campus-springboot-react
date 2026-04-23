@@ -23,6 +23,7 @@ api.interceptors.response.use(
 )
 
 export default api
+
 export const resourceService = {
   // Get all resources (with filters)
   getAll: (params) => 
