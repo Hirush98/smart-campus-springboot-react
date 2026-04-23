@@ -41,6 +41,24 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
 
+    @GetMapping("/status")
+    public ResponseEntity<?> checkStatus() {
+        try {
+            long count = userRepository.count();
+            return ResponseEntity.ok(Map.of(
+                "status", "UP",
+                "database", "Connected",
+                "userCount", count
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "DOWN",
+                "database", "Disconnected",
+                "error", e.getMessage()
+            ));
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
