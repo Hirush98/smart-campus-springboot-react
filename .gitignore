@@ -14,7 +14,6 @@ frontend/.env.local
 # ── IDE ──────────────────────────
 .idea/
 *.iml
-.vscode/
 *.suo
 *.user
 
@@ -28,3 +27,8 @@ application-prod.properties
 
 
 backend/src/main/resources/application.properties
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+config.bat
+node_modules
