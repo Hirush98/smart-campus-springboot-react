@@ -59,6 +59,9 @@ public class Resource {
     private String serialNumber;
     private String manufacturer;
 
+    // ✅ NEW: image URLs (max 5 enforced in service layer)
+    private List<String> imageUrls;
+
     @CreatedDate
     private LocalDateTime createdAt;
 

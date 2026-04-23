@@ -7,8 +7,13 @@ import com.smartcampus.model.enums.ResourceType;
 import com.smartcampus.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import com.cloudinary.Cloudinary;
 
 /**
  * Module A - Facilities & Assets Catalogue
@@ -19,6 +24,7 @@ import java.util.List;
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
+    private final Cloudinary cloudinary;
 
     public List<Resource> getAllResources() {
         return resourceRepository.findAll();
@@ -30,7 +36,7 @@ public class ResourceService {
     }
 
     public List<Resource> searchResources(ResourceType type, ResourceStatus status,
-                                           String location, Integer minCapacity) {
+            String location, Integer minCapacity) {
         if (type != null && status != null) {
             return resourceRepository.findByTypeAndStatus(type, status);
         }
@@ -72,6 +78,59 @@ public class ResourceService {
     public Resource updateResourceStatus(String id, ResourceStatus status) {
         Resource resource = getResourceById(id);
         resource.setStatus(status);
+        return resourceRepository.save(resource);
+    }
+
+    public Resource addImages(String id, List<MultipartFile> files) {
+
+        Resource resource = getResourceById(id);
+
+        if (files == null || files.isEmpty()) {
+            return resource;
+        }
+
+        List<String> existingImages = resource.getImageUrls() != null ? resource.getImageUrls() : new ArrayList<>();
+
+        if (existingImages.size() + files.size() > 5) {
+            throw new IllegalArgumentException("Maximum 5 images allowed per resource");
+        }
+
+        for (MultipartFile file : files) {
+            try {
+                Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), Map.of());
+
+                String url = (String) uploadResult.get("secure_url");
+
+                existingImages.add(url);
+
+            } catch (IOException e) {
+                throw new RuntimeException("Image upload failed", e);
+            }
+        }
+
+        resource.setImageUrls(existingImages);
+
+        return resourceRepository.save(resource);
+    }
+
+    public Resource deleteImage(String id, String imageUrl) {
+
+        Resource resource = getResourceById(id);
+
+        List<String> images = resource.getImageUrls();
+
+        if (images == null || images.isEmpty()) {
+            throw new IllegalArgumentException("No images found for this resource");
+        }
+
+        if (!images.contains(imageUrl)) {
+            throw new IllegalArgumentException("Image not found in this resource");
+        }
+
+        images.remove(imageUrl);
+
+        resource.setImageUrls(images);
+
         return resourceRepository.save(resource);
     }
 
