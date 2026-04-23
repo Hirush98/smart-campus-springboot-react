@@ -23,15 +23,60 @@ api.interceptors.response.use(
 )
 
 export default api
-
 export const resourceService = {
-  getAll:    (params) => api.get('/resources', { params }),
-  getById:   (id)     => api.get(`/resources/${id}`),
-  create:    (data)   => api.post('/resources', data),
-  update:    (id, d)  => api.put(`/resources/${id}`, d),
-  setStatus: (id, s)  => api.patch(`/resources/${id}/status`, null, { params: { status: s } }),
-  delete:    (id)     => api.delete(`/resources/${id}`),
-}
+  // Get all resources (with filters)
+  getAll: (params) => 
+    api.get('/resources', { params }),
+
+  // Get single resource
+  getById: (id) => 
+    api.get(`/resources/${id}`),
+
+  // Create resource (ADMIN)
+  create: (data) => 
+    api.post('/resources', data),
+
+  // ✏️ Update full resource (ADMIN)
+  update: (id, data) => 
+    api.put(`/resources/${id}`, data),
+
+  // Update status (ADMIN)
+  setStatus: (id, status) => 
+    api.patch(`/resources/${id}/status`, null, {
+      params: { status }
+    }),
+
+  // Upload images (multipart) (ADMIN)
+  uploadImages: (id, files) => {
+    const formData = new FormData();
+
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+
+    return api.post(`/resources/${id}/images`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  // Delete single image (ADMIN)
+  deleteImage: (id, imageUrl) => 
+    api.delete(`/resources/${id}/images`, {
+      params: { imageUrl }
+    }),
+
+  // Delete resource (ADMIN)
+  delete: (id) => 
+    api.delete(`/resources/${id}`),
+
+  // Get QR code (returns image)
+  getQR: (id) => 
+    api.get(`/resources/${id}/qr`, {
+      responseType: 'blob' // IMPORTANT
+    }),
+};
 
 export const bookingService = {
   getAll:   (params) => api.get('/bookings', { params }),
