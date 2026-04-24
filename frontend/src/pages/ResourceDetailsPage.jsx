@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import { resourceService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import { useAuth } from '../context/AuthContext'
+import ResourceModal from '../components/resources/ResourceModal'
+import toast from 'react-hot-toast'
 
 const TYPE_LABELS = {
     LECTURE_HALL: 'Lecture Hall',
@@ -20,6 +22,23 @@ export default function ResourceDetailsPage() {
     const [qrUrl, setQrUrl] = useState(null)
     const [showViewer, setShowViewer] = useState(false)
     const [currentIndex, setCurrentIndex] = useState(0)
+    const [showEditOptions, setShowEditOptions] = useState(false)
+    const [editMode, setEditMode] = useState(null)
+    // 'details' | 'images'
+
+    const handleUpdate = async (data) => {
+        try {
+            await resourceService.update(resource.id, data)
+            toast.success('Resource updated')
+
+            setEditMode(null)
+            fetchResource()
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Update failed')
+            throw err // IMPORTANT: keeps modal from silently finishing
+        }
+    }
+
 
     useEffect(() => {
         fetchResource()
@@ -131,7 +150,10 @@ export default function ResourceDetailsPage() {
 
                                 {/* Edit */}
                                 {isAdmin && (
-                                    <button className="btn-primary text-xs sm:text-sm px-3 py-2">
+                                    <button
+                                        onClick={() => setShowEditOptions(true)}
+                                        className="btn-primary text-xs sm:text-sm px-3 py-2"
+                                    >
                                         ✏️ Edit
                                     </button>
                                 )}
@@ -230,6 +252,37 @@ export default function ResourceDetailsPage() {
                     index={currentIndex}
                     onClose={() => setShowViewer(false)}
                     onChange={setCurrentIndex}
+                />
+            )}
+
+            {showEditOptions && (
+                <EditOptionsModal
+                    imageCount={resource?.imageUrls?.length || 0}
+                    onClose={() => setShowEditOptions(false)}
+                    onSelect={(mode) => {
+                        setEditMode(mode)
+                        setShowEditOptions(false)
+                    }}
+                />
+            )}
+
+            {editMode === 'details' && (
+                <ResourceModal
+                    show={true}
+                    resource={resource}
+                    onClose={() => setEditMode(null)}
+                    onSubmit={handleUpdate}   // ✅ USE THIS
+                />
+            )}
+
+            {editMode === 'images' && (
+                <EditImagesModal
+                    resource={resource}
+                    onClose={() => setEditMode(null)}
+                    onUpdated={() => {
+                        setEditMode(null)
+                        fetchResource()
+                    }}
                 />
             )}
         </Layout>
@@ -337,6 +390,177 @@ function ImageViewer({ images, index, onClose, onChange }) {
                 {index + 1} / {images.length}
             </div>
 
+        </div>
+    )
+}
+
+function EditOptionsModal({ imageCount = 0, onClose, onSelect }) {
+    const maxImages = 5
+    const isFull = imageCount >= maxImages
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4">
+
+                <h2 className="text-lg font-bold">Edit Resource</h2>
+
+                <button
+                    onClick={() => onSelect('details')}
+                    className="btn-primary w-full"
+                >
+                    Update Details
+                </button>
+
+                {/* ✅ ALWAYS ENABLED */}
+                <button
+                    onClick={() => onSelect('images')}
+                    className="btn-secondary w-full"
+                >
+                    {isFull ? 'Manage Images (Limit Reached)' : 'Update Images'}
+                </button>
+
+                <button
+                    onClick={onClose}
+                    className="w-full text-sm text-gray-400 mt-2"
+                >
+                    Cancel
+                </button>
+
+            </div>
+        </div>
+    )
+}
+
+function EditImagesModal({ resource, onClose, onUpdated }) {
+    const [files, setFiles] = useState([])
+    const [existing, setExisting] = useState(resource.imageUrls || [])
+    const [uploading, setUploading] = useState(false)
+    const [deleting, setDeleting] = useState(false)
+
+    const MAX = 5
+
+    // ✅ DELETE EXISTING IMAGE (API)
+    const handleDeleteImage = async (url) => {
+        try {
+            setDeleting(true)
+            await resourceService.deleteImage(resource.id, url)
+            // remove instantly from UI
+            setExisting(prev => prev.filter(img => img !== url))
+
+            toast.success('Image removed')
+        } catch {
+            toast.error('Delete failed')
+        } finally {
+            setDeleting(false)
+        }
+    }
+
+    // ✅ UPLOAD NEW IMAGES
+    const handleSubmit = async () => {
+        try {
+            setUploading(true)
+
+            await resourceService.uploadImages(resource.id, files)
+
+            toast.success('Images updated')
+            onUpdated()
+        } catch {
+            toast.error('Upload failed')
+        } finally {
+            setUploading(false)
+        }
+    }
+
+    const total = existing.length + files.length
+    const canAddMore = total < MAX
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white w-fit rounded-2xl p-6">
+
+                <h2 className="text-xl font-bold mb-4">Update Images</h2>
+
+                {/* Changed overflow-x-auto to flex-wrap. 
+            This prevents the '×' buttons from being clipped. */}
+                <div className="flex flex-wrap gap-4 mb-6 items-center">
+
+                    {/* EXISTING IMAGES */}
+                    {existing.map((url, i) => (
+                        <div key={url} className="relative w-20 h-20">
+                            <img
+                                src={url}
+                                className="w-20 h-20 object-cover rounded-lg border shadow-sm"
+                                alt="Existing"
+                            />
+                            <button
+                                onClick={() => handleDeleteImage(url)}
+                                disabled={deleting}
+                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-colors"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    ))}
+
+                    {/* NEW FILES */}
+                    {files.map((file, i) => (
+                        <div key={i} className="relative w-20 h-20">
+                            <img
+                                src={URL.createObjectURL(file)}
+                                className="w-20 h-20 object-cover rounded-lg border shadow-sm"
+                                alt="New upload"
+                            />
+                            <button
+                                onClick={() =>
+                                    setFiles(prev => prev.filter((_, idx) => idx !== i))
+                                }
+                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-colors"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    ))}
+
+                    {/* ADD BUTTON */}
+                    {canAddMore && (
+                        <label className="w-20 h-20 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 text-gray-400 transition-all">
+                            <span className="text-2xl">+</span>
+                            <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                hidden
+                                onChange={(e) => {
+                                    const newFiles = Array.from(e.target.files);
+                                    if (total + newFiles.length > MAX) {
+                                        toast.error(`Max ${MAX} images allowed`);
+                                        return;
+                                    }
+                                    setFiles(prev => [...prev, ...newFiles]);
+                                }}
+                            />
+                        </label>
+                    )}
+                </div>
+
+                {/* ACTIONS */}
+                <div className="flex justify-end gap-3 border-t pt-4">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        onClick={handleSubmit}
+                        disabled={uploading || (files.length === 0 && !deleting)}
+                        className="px-6 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg shadow-sm transition-all"
+                    >
+                        {uploading ? 'Updating...' : 'Save Images'}
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }

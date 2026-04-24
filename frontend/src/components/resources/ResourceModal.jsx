@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 
 const TYPE_OPTIONS = [
   { value: 'LECTURE_HALL', label: 'Lecture Hall' },
@@ -86,7 +87,6 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: 'rgba(0,0,0,0.5)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b">
