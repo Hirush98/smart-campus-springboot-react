@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
 import { resourceService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import { useAuth } from '../context/AuthContext'
 import ResourceModal from '../components/resources/ResourceModal'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 
 const TYPE_LABELS = {
     LECTURE_HALL: 'Lecture Hall',
@@ -16,6 +17,7 @@ const TYPE_LABELS = {
 export default function ResourceDetailsPage() {
     const { id } = useParams()
     const { isAdmin } = useAuth()
+    const navigate = useNavigate()
 
     const [resource, setResource] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -24,7 +26,7 @@ export default function ResourceDetailsPage() {
     const [currentIndex, setCurrentIndex] = useState(0)
     const [showEditOptions, setShowEditOptions] = useState(false)
     const [editMode, setEditMode] = useState(null)
-    // 'details' | 'images'
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
     const handleUpdate = async (data) => {
         try {
@@ -39,6 +41,17 @@ export default function ResourceDetailsPage() {
         }
     }
 
+    const handleDeleteResource = async () => {
+        try {
+            await resourceService.delete(resource.id)
+            toast.success('Resource deleted')
+
+            navigate('/resources')
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Delete failed')
+            throw err
+        }
+    }
 
     useEffect(() => {
         fetchResource()
@@ -155,6 +168,15 @@ export default function ResourceDetailsPage() {
                                         className="btn-primary text-xs sm:text-sm px-3 py-2"
                                     >
                                         ✏️ Edit
+                                    </button>
+                                )}
+                                {/* Delete */}
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(true)}
+                                        className="btn-danger text-xs sm:text-sm px-3 py-2"
+                                    >
+                                        🗑 Delete
                                     </button>
                                 )}
 
@@ -285,6 +307,15 @@ export default function ResourceDetailsPage() {
                     }}
                 />
             )}
+
+            {showDeleteConfirm && (
+                <DeleteConfirmModal
+                    onCancel={() => setShowDeleteConfirm(false)}
+                    onConfirm={handleDeleteResource}
+                />
+            )}
+
+
         </Layout>
     )
 }
@@ -559,6 +590,55 @@ function EditImagesModal({ resource, onClose, onUpdated }) {
                     >
                         {uploading ? 'Updating...' : 'Save Images'}
                     </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function DeleteConfirmModal({ onCancel, onConfirm }) {
+    const [loading, setLoading] = useState(false)
+
+    const handleConfirm = async () => {
+        try {
+            setLoading(true)
+            await onConfirm()
+            onCancel()
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white w-full max-w-sm rounded-2xl p-6 space-y-4">
+
+                <h2 className="text-lg font-bold text-red-600">
+                    Delete Resource
+                </h2>
+
+                <p className="text-sm text-gray-600">
+                    Are you sure you want to delete this resource? This action cannot be undone.
+                </p>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+
+                    <button
+                        onClick={onCancel}
+                        className="btn-secondary"
+                        disabled={loading}
+                    >
+                        No, Cancel
+                    </button>
+
+                    <button
+                        onClick={handleConfirm}
+                        disabled={loading}
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                    >
+                        {loading ? 'Deleting...' : 'Yes, Delete'}
+                    </button>
+
                 </div>
             </div>
         </div>
