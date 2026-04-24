@@ -214,15 +214,24 @@ export default function ResourceDetailsPage() {
                             {resource.availabilityWindows?.length > 0 ? (
                                 <div className="flex flex-wrap gap-2">
                                     {resource.availabilityWindows.map((slot, i) => (
-                                        <span key={i} className="tag">
+                                        <span
+                                            key={i}
+                                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm transition-all hover:bg-indigo-100"
+                                        >
+                                            {/* Calendar Icon for a "Calm" visual cue */}
+                                            <svg className="w-3 h-3 mr-1.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
                                             {slot}
                                         </span>
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-gray-400 text-sm">
-                                    No time slots configured for this resource
-                                </p>
+                                <div className="flex items-center p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                    <p className="text-slate-400 text-sm italic">
+                                        No time slots configured for this resource
+                                    </p>
+                                </div>
                             )}
                         </Card>
 

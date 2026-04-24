@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import AvailabilityPicker from './AvailabilityPicker'
 
 const TYPE_OPTIONS = [
   { value: 'LECTURE_HALL', label: 'Lecture Hall' },
-  { value: 'LAB',          label: 'Lab' },
+  { value: 'LAB', label: 'Lab' },
   { value: 'MEETING_ROOM', label: 'Meeting Room' },
-  { value: 'EQUIPMENT',    label: 'Equipment' },
+  { value: 'EQUIPMENT', label: 'Equipment' },
 ]
 
 const EMPTY = {
@@ -16,22 +17,67 @@ const EMPTY = {
   floor: '',
   capacity: '',
   description: '',
-  availabilityWindows: '',
+  availabilityWindows: {},
   serialNumber: '',
   manufacturer: '',
 }
+
+/* ---------------- helpers ---------------- */
+
+// backend → UI
+const parseAvailability = (arr = []) => {
+  const result = {}
+
+  arr.forEach(item => {
+    const [day, time] = item.split(' ')
+    if (!day || !time) return
+
+    const [start, end] = time.split('-')
+    if (!start || !end) return
+
+    const startHour = parseInt(start)
+    const endHour = parseInt(end)
+
+    if (!result[day]) result[day] = []
+
+    result[day].push({
+      start: startHour,
+      end: endHour
+    })
+  })
+
+  return result
+}
+
+// UI → backend
+const formatAvailability = (data = {}) => {
+  const result = []
+
+  Object.entries(data).forEach(([day, slots]) => {
+    slots.forEach(slot => {
+      result.push(`${day} ${slot.start}:00-${slot.end}:00`)
+    })
+  })
+
+  return result
+}
+
+/* ---------------- component ---------------- */
+
 
 export default function ResourceModal({ show, onClose, onSubmit, resource }) {
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const [showAvailability, setShowAvailability] = useState(false)
+
 
   useEffect(() => {
     if (resource) {
       setForm({
         ...resource,
         capacity: resource.capacity || '',
-        availabilityWindows: resource.availabilityWindows?.join(', ') || '',
+        availabilityWindows: parseAvailability(resource.availabilityWindows || []),
         serialNumber: resource.serialNumber || '',
         manufacturer: resource.manufacturer || '',
         building: resource.building || '',
@@ -53,8 +99,8 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
 
   const validate = () => {
     const e = {}
-    if (!form.name?.trim())     e.name = 'Name is required'
-    if (!form.type)             e.type = 'Type is required'
+    if (!form.name?.trim()) e.name = 'Name is required'
+    if (!form.type) e.type = 'Type is required'
     if (!form.location?.trim()) e.location = 'Location is required'
     if (form.capacity && parseInt(form.capacity) < 1) e.capacity = 'Capacity must be at least 1'
     return e
@@ -73,9 +119,8 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
       const data = {
         ...form,
         capacity: form.capacity ? parseInt(form.capacity) : null,
-        availabilityWindows: form.availabilityWindows
-          ? form.availabilityWindows.split(',').map(s => s.trim()).filter(s => s)
-          : []
+        // 🔥 IMPORTANT CONVERSION HERE
+        availabilityWindows: formatAvailability(form.availabilityWindows)
       }
       await onSubmit(data)
     } finally {
@@ -84,24 +129,24 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: 'rgba(0,0,0,0.5)' }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div className="bg-white rounded-2xl w-full max-w-sm sm:max-w-md md:max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b flex-shrink-0">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">
             {resource ? 'Edit Resource' : 'Add New Resource'}
           </h2>
-          <button 
+          <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl font-light"
+            className="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl font-light"
           >
             &times;
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Name */}
             <div className="md:col-span-2">
@@ -189,23 +234,40 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
             </div>
 
             {/* Availability */}
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                 Availability Windows
               </label>
-              <input
-                className="input"
-                value={form.availabilityWindows}
-                onChange={e => set('availabilityWindows', e.target.value)}
-                placeholder="e.g. 08:00-18:00, 10:00-14:00"
-              />
-              <p className="text-[10px] text-gray-400 mt-1">Comma separated time ranges</p>
+
+              {/* BUTTON */}
+              <button
+                type="button"
+                onClick={() => setShowAvailability(true)}
+                className="btn-secondary w-full"
+              >
+                Set Availability
+              </button>
+
+              {/* SUMMARY */}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {Object.entries(form.availabilityWindows || {}).map(([day, slots]) =>
+                  slots.map((s, i) => (
+                    <span
+                      key={`${day}-${i}`}
+                      className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
+                    >
+                      {day} {s.start}:00-{s.end}:00
+                    </span>
+                  ))
+                )}
+              </div>
             </div>
+
           </div>
 
           {/* Equipment Specific */}
           {form.type === 'EQUIPMENT' && (
-            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                   Serial Number
@@ -237,31 +299,65 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
               Description
             </label>
             <textarea
-              className="input min-h-[100px]"
+              className="input min-h-[80px] sm:min-h-[100px]"
               value={form.description}
               onChange={e => set('description', e.target.value)}
               placeholder="Provide some details about the resource..."
             />
           </div>
-
-          <div className="flex gap-3 pt-4 border-t">
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary flex-1 py-3"
-            >
-              {loading ? 'Saving...' : resource ? 'Update Resource' : 'Create Resource'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary px-8"
-            >
-              Cancel
-            </button>
-          </div>
         </form>
+
+        <div className="flex flex-col sm:flex-row gap-3 p-4 sm:p-6 border-t flex-shrink-0">
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary flex-1 py-3"
+            onClick={handleSubmit}
+          >
+            {loading ? 'Saving...' : resource ? 'Update Resource' : 'Create Resource'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary py-3 px-4 sm:px-8"
+          >
+            Cancel
+          </button>
+        </div>
+
       </div>
+      {showAvailability && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl p-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold mb-3">
+              Select Availability
+            </h2>
+
+            <AvailabilityPicker
+              value={form.availabilityWindows}
+              onChange={(val) => set('availabilityWindows', val)}
+            />
+
+            <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
+              <button
+                type="button"
+                className="btn-secondary py-2 px-4"
+                onClick={() => setShowAvailability(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary py-2 px-4"
+                onClick={() => setShowAvailability(false)}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
