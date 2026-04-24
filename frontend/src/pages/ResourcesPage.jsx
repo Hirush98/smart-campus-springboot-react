@@ -36,6 +36,8 @@ export default function ResourcesPage() {
   const [step, setStep] = useState(1)
   const [createdResource, setCreatedResource] = useState(null)
 
+  const capitalizeFirst = (str = '') => str.charAt(0).toUpperCase() + str.slice(1)
+
   const fetchResources = async () => {
     setLoading(true)
     try {
@@ -208,7 +210,7 @@ export default function ResourcesPage() {
 
               <div className="p-5 flex-1 flex flex-col">
                 <div className="mb-3">
-                  <h3 className="font-bold text-lg text-gray-900 leading-tight">{r.name}</h3>
+                  <h3 className="font-bold text-lg text-gray-900 leading-tight">{capitalizeFirst(r.name)}</h3>
                   <p className="text-sm text-blue-600 font-medium mt-1">
                     {TYPE_LABELS[r.type] || r.type}
                   </p>
@@ -220,7 +222,7 @@ export default function ResourcesPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    {r.location}{r.building ? `, ${r.building}` : ''}
+                    {capitalizeFirst(r.location)}{capitalizeFirst(r.building) ? `, ${capitalizeFirst(r.building)}` : ''}
                   </div>
                   {r.capacity && (
                     <div className="flex items-center text-sm text-gray-600">
@@ -232,8 +234,8 @@ export default function ResourcesPage() {
                   )}
                 </div>
 
-                {r.description && (
-                  <p className="text-sm text-gray-500 line-clamp-2 mb-4">{r.description}</p>
+                {capitalizeFirst(r.description) && (
+                  <p className="text-sm text-gray-500 line-clamp-2 mb-4">{capitalizeFirst(r.description)}</p>
                 )}
 
                 <p className='text-blue-600 hover:underline cursor-pointer text-sm' onClick={() => navigate(`/resources/${r.id}`)}>

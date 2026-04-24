@@ -28,6 +28,8 @@ export default function ResourceDetailsPage() {
     const [editMode, setEditMode] = useState(null)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+    const capitalizeFirst = (str = '') => str.charAt(0).toUpperCase() + str.slice(1)
+
     const handleUpdate = async (data) => {
         try {
             await resourceService.update(resource.id, data)
@@ -40,6 +42,7 @@ export default function ResourceDetailsPage() {
             throw err // IMPORTANT: keeps modal from silently finishing
         }
     }
+
 
     const handleDeleteResource = async () => {
         try {
@@ -138,7 +141,7 @@ export default function ResourceDetailsPage() {
                             {/* TITLE */}
                             <div>
                                 <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight">
-                                    {resource.name}
+                                    {capitalizeFirst(resource.name)}
                                 </h1>
                                 <p className="text-xs sm:text-sm opacity-90 mt-1">
                                     {TYPE_LABELS[resource.type]}
@@ -203,9 +206,9 @@ export default function ResourceDetailsPage() {
 
                         <Card title="Overview">
                             <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                                <Info icon="📍" label="Location" value={resource.location} />
-                                <Info icon="🏢" label="Building" value={resource.building || '-'} />
-                                <Info icon="⬆️" label="Floor" value={resource.floor || '-'} />
+                                <Info icon="📍" label="Location" value={capitalizeFirst(resource.location)} />
+                                <Info icon="🏢" label="Building" value={capitalizeFirst(resource.building) || '-'} />
+                                <Info icon="⬆️" label="Floor" value={capitalizeFirst(resource.floor) || '-'} />
                                 <Info icon="👥" label="Capacity" value={resource.capacity || '-'} />
                             </div>
                         </Card>
@@ -238,15 +241,15 @@ export default function ResourceDetailsPage() {
                         {resource.type === 'EQUIPMENT' && (
                             <Card title="Equipment Information">
                                 <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                                    <Info label="Serial Number" value={resource.serialNumber || '-'} />
-                                    <Info label="Manufacturer" value={resource.manufacturer || '-'} />
+                                    <Info label="Serial Number" value={capitalizeFirst(resource.serialNumber) || '-'} />
+                                    <Info label="Manufacturer" value={capitalizeFirst(resource.manufacturer) || '-'} />
                                 </div>
                             </Card>
                         )}
 
                         <Card title="About this resource">
                             <p className="text-sm text-gray-700 leading-relaxed">
-                                {resource.description || 'No additional details provided.'}
+                                {capitalizeFirst(resource.description) || 'No additional details provided.'}
                             </p>
                         </Card>
 
