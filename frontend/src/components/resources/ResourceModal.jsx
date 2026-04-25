@@ -9,11 +9,19 @@ const TYPE_OPTIONS = [
   { value: 'EQUIPMENT', label: 'Equipment' },
 ]
 
+const BUILDING_OPTIONS = [
+  { value: 'Main Building', label: 'Main Building' },
+  { value: 'New Building', label: 'New Building' },
+  { value: 'FoE Building', label: 'FoE Building' },
+  { value: 'Computing Faculty Building', label: 'Computing Faculty Building' },
+  { value: 'business Faculty Building', label: 'business Faculty Building' },
+]
+
 const EMPTY = {
   name: '',
   type: 'LECTURE_HALL',
   location: '',
-  building: '',
+  building: 'Main Building',
   floor: '',
   capacity: '',
   description: '',
@@ -98,9 +106,17 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
     if (!form.name?.trim()) e.name = 'Name is required'
     if (!form.type) e.type = 'Type is required'
     if (!form.location?.trim()) e.location = 'Location is required'
+    if (!form.building) e.building = 'Building is required'
+    if (!form.floor?.toString().trim()) e.floor = 'Floor is required'
+    if (!form.capacity?.toString().trim()) e.capacity = 'Capacity is required'
+    if (!form.description?.trim()) e.description = 'Description is required'
 
-    if (form.capacity && parseInt(form.capacity) < 1) {
-      e.capacity = 'Capacity must be at least 1'
+    if (form.capacity && parseInt(form.capacity) < 0) {
+      e.capacity = 'Capacity cannot be negative'
+    }
+
+    if (form.floor && parseInt(form.floor) < 0) {
+      e.floor = 'Floor cannot be negative'
     }
 
     // extra safety validation
@@ -112,11 +128,7 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
       e.location = 'Only letters, numbers and spaces allowed'
     }
 
-    if (!/^[A-Za-z0-9\s]+$/.test(form.building || '')) {
-      e.building = 'Only letters, numbers and spaces allowed'
-    }
-
-    if (!/^[A-Za-z0-9\s]+$/.test(form.floor || '')) {
+    if (!/^[A-Za-z0-9\s-]+$/.test(form.floor || '')) {
       e.floor = 'Only letters, numbers and spaces allowed'
     }
 
@@ -195,17 +207,23 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
+              {errors.type && <p className="text-xs text-red-500">{errors.type}</p>}
             </div>
 
             {/* CAPACITY */}
             <div>
-              <label className="label">Capacity</label>
+              <label className="label">Capacity *</label>
               <input
                 type="number"
                 className="input"
+                min="0"
                 value={form.capacity}
-                onChange={e => set('capacity', e.target.value)}
+                onChange={e => {
+                  const val = e.target.value
+                  if (val === '' || parseInt(val) >= 0) set('capacity', val)
+                }}
               />
+              {errors.capacity && <p className="text-xs text-red-500">{errors.capacity}</p>}
             </div>
 
             {/* LOCATION */}
@@ -216,26 +234,39 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
                 value={form.location}
                 onChange={e => set('location', lettersNumbersSpaces(e.target.value))}
               />
+              {errors.location && <p className="text-xs text-red-500">{errors.location}</p>}
             </div>
 
             {/* FLOOR */}
             <div>
-              <label className="label">Floor</label>
+              <label className="label">Floor *</label>
               <input
+                type="number"
                 className="input"
+                min="0"
                 value={form.floor}
-                onChange={e => set('floor', lettersNumbersSpaces(e.target.value))}
+                onChange={e => {
+                  const val = e.target.value
+                  if (val === '' || parseInt(val) >= 0) set('floor', val)
+                }}
               />
+              {errors.floor && <p className="text-xs text-red-500">{errors.floor}</p>}
             </div>
 
             {/* BUILDING */}
             <div>
-              <label className="label">Building</label>
-              <input
+              <label className="label">Building *</label>
+              <select
                 className="input"
                 value={form.building}
-                onChange={e => set('building', lettersNumbersSpaces(e.target.value))}
-              />
+                onChange={e => set('building', e.target.value)}
+              >
+                <option value="">Select a building</option>
+                {BUILDING_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              {errors.building && <p className="text-xs text-red-500">{errors.building}</p>}
             </div>
           </div>
 
@@ -290,12 +321,13 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
 
           {/* DESCRIPTION */}
           <div>
-            <label className="label">Description</label>
+            <label className="label">Description *</label>
             <textarea
               className="input min-h-[90px]"
               value={form.description}
               onChange={e => set('description', e.target.value)}
             />
+            {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
           </div>
         </form>
 

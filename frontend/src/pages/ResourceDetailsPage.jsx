@@ -208,7 +208,7 @@ export default function ResourceDetailsPage() {
                             <div className="grid sm:grid-cols-2 gap-4 text-sm">
                                 <Info icon="📍" label="Location" value={capitalizeFirst(resource.location)} />
                                 <Info icon="🏢" label="Building" value={capitalizeFirst(resource.building) || '-'} />
-                                <Info icon="⬆️" label="Floor" value={capitalizeFirst(resource.floor) || '-'} />
+                                <Info icon="⬆️" label="Floor" value={capitalizeFirst(resource.floor) + 'th floor' || '-'} />
                                 <Info icon="👥" label="Capacity" value={resource.capacity || '-'} />
                             </div>
                         </Card>
