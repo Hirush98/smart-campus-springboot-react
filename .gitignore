@@ -25,6 +25,7 @@ Thumbs.db
 # ── Secrets (never commit these) ─
 *.env
 application-prod.properties
+application.properties
 
 
 
