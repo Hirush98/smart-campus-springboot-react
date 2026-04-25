@@ -9,11 +9,15 @@ export default function EditAnnouncementPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState({ title: '', message: '' })
+  const [form, setForm] = useState({ title: '', message: '', audience: 'ALL' })
 
   useEffect(() => {
     notificationService.getAnnouncement(id)
-      .then(res => setForm({ title: res.data.title || '', message: res.data.message || '' }))
+      .then(res => setForm({
+        title: res.data.title || '',
+        message: res.data.message || '',
+        audience: res.data.audience || 'ALL',
+      }))
       .catch(() => {
         toast.error('Failed to load announcement')
         navigate('/notifications', { replace: true })
@@ -29,6 +33,7 @@ export default function EditAnnouncementPage() {
       await notificationService.updateAnnouncement(id, {
         title: form.title.trim(),
         message: form.message.trim(),
+        audience: form.audience,
       })
       toast.success('Announcement updated')
       navigate('/notifications')
@@ -48,7 +53,7 @@ export default function EditAnnouncementPage() {
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">Edit Announcement</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Update this announcement for all users.
+            Update the message and audience for this announcement.
           </p>
         </div>
 
@@ -59,6 +64,19 @@ export default function EditAnnouncementPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Send To</label>
+                <select
+                  className="input"
+                  value={form.audience}
+                  onChange={e => setForm(current => ({ ...current, audience: e.target.value }))}
+                >
+                  <option value="ALL">All</option>
+                  <option value="USER">Users</option>
+                  <option value="TECHNICIAN">Technicians</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                 <input

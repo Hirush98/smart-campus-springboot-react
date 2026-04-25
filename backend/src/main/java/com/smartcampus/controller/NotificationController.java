@@ -63,7 +63,11 @@ public class NotificationController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> createAnnouncement(
             @Valid @RequestBody AnnouncementRequest request) {
-        notificationService.createAnnouncement(request.getTitle(), request.getMessage());
+        notificationService.createAnnouncement(
+                request.getTitle(),
+                request.getMessage(),
+                request.getAudience()
+        );
         return ResponseEntity.ok(Map.of("message", "Announcement created successfully"));
     }
 
@@ -79,7 +83,12 @@ public class NotificationController {
     public ResponseEntity<Map<String, String>> updateAnnouncement(
             @PathVariable String id,
             @Valid @RequestBody AnnouncementRequest request) {
-        notificationService.updateAnnouncement(id, request.getTitle(), request.getMessage());
+        notificationService.updateAnnouncement(
+                id,
+                request.getTitle(),
+                request.getMessage(),
+                request.getAudience()
+        );
         return ResponseEntity.ok(Map.of("message", "Announcement updated successfully"));
     }
 
@@ -98,5 +107,8 @@ public class NotificationController {
 
         @NotBlank
         private String message;
+
+        @NotBlank
+        private String audience;
     }
 }

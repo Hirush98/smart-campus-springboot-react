@@ -4,6 +4,7 @@ import com.smartcampus.model.Booking;
 import com.smartcampus.model.Notification;
 import com.smartcampus.model.Ticket;
 import com.smartcampus.model.User;
+import com.smartcampus.model.enums.Role;
 import com.smartcampus.model.enums.NotificationType;
 import com.smartcampus.repository.NotificationRepository;
 import com.smartcampus.repository.TicketRepository;
@@ -49,24 +50,9 @@ public class NotificationService {
         notificationRepository.saveAll(unread);
     }
 
-    public void createAnnouncement(String title, String message) {
+    public void createAnnouncement(String title, String message, String audience) {
         String announcementId = UUID.randomUUID().toString();
-        List<User> users = userRepository.findAll();
-        List<Notification> announcements = new ArrayList<>();
-
-        for (User user : users) {
-            announcements.add(Notification.builder()
-                    .userId(user.getId())
-                    .title(title)
-                    .message(message)
-                    .type(NotificationType.ANNOUNCEMENT)
-                    .referenceId(announcementId)
-                    .referenceType("ANNOUNCEMENT")
-                    .read(false)
-                    .build());
-        }
-
-        notificationRepository.saveAll(announcements);
+        saveAnnouncementsForAudience(announcementId, title, message, audience);
     }
 
     public AnnouncementDetails getAnnouncement(String announcementId) {
@@ -74,27 +60,19 @@ public class NotificationService {
         return new AnnouncementDetails(
                 notification.getReferenceId() != null ? notification.getReferenceId() : notification.getId(),
                 notification.getTitle(),
-                notification.getMessage()
+                notification.getMessage(),
+                notification.getAudience()
         );
     }
 
-    public void updateAnnouncement(String announcementId, String title, String message) {
+    public void updateAnnouncement(String announcementId, String title, String message, String audience) {
         Notification representative = findAnnouncementRepresentative(announcementId);
+        String resolvedAnnouncementId = representative.getReferenceId() != null
+                ? representative.getReferenceId()
+                : representative.getId();
 
-        if (representative.getReferenceId() != null) {
-            List<Notification> notifications = notificationRepository.findByReferenceTypeAndReferenceId(
-                    "ANNOUNCEMENT", representative.getReferenceId());
-            notifications.forEach(n -> {
-                n.setTitle(title);
-                n.setMessage(message);
-            });
-            notificationRepository.saveAll(notifications);
-            return;
-        }
-
-        representative.setTitle(title);
-        representative.setMessage(message);
-        notificationRepository.save(representative);
+        deleteAnnouncement(resolvedAnnouncementId);
+        saveAnnouncementsForAudience(resolvedAnnouncementId, title, message, audience);
     }
 
     public void deleteAnnouncement(String announcementId) {
@@ -167,6 +145,52 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
+    private void saveAnnouncementsForAudience(String announcementId, String title, String message, String audience) {
+        List<User> recipients = userRepository.findAll().stream()
+                .filter(user -> matchesAudience(user, audience))
+                .toList();
+
+        List<Notification> announcements = new ArrayList<>();
+
+        for (User user : recipients) {
+            announcements.add(Notification.builder()
+                    .userId(user.getId())
+                    .title(title)
+                    .message(message)
+                    .type(NotificationType.ANNOUNCEMENT)
+                    .audience(audience)
+                    .referenceId(announcementId)
+                    .referenceType("ANNOUNCEMENT")
+                    .read(false)
+                    .build());
+        }
+
+        notificationRepository.saveAll(announcements);
+    }
+
+    private boolean matchesAudience(User user, String audience) {
+        if (audience == null || audience.equalsIgnoreCase("ALL")) {
+            return true;
+        }
+
+        var roles = user.getRoles();
+        if (roles == null || roles.isEmpty()) {
+            return false;
+        }
+
+        if (audience.equalsIgnoreCase("TECHNICIAN")) {
+            return roles.contains(Role.TECHNICIAN);
+        }
+
+        if (audience.equalsIgnoreCase("USER")) {
+            return roles.contains(Role.USER)
+                    && !roles.contains(Role.ADMIN)
+                    && !roles.contains(Role.TECHNICIAN);
+        }
+
+        return false;
+    }
+
     private Notification findAnnouncementRepresentative(String announcementId) {
         return notificationRepository.findFirstByReferenceTypeAndReferenceId("ANNOUNCEMENT", announcementId)
                 .or(() -> notificationRepository.findById(announcementId)
@@ -179,5 +203,6 @@ public class NotificationService {
         private final String id;
         private final String title;
         private final String message;
+        private final String audience;
     }
 }

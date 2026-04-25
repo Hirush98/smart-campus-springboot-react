@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 
 export default function CreateAnnouncementPage() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ title: '', message: '' })
+  const [form, setForm] = useState({ title: '', message: '', audience: 'ALL' })
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e) => {
@@ -17,6 +17,7 @@ export default function CreateAnnouncementPage() {
       await notificationService.createAnnouncement({
         title: form.title.trim(),
         message: form.message.trim(),
+        audience: form.audience,
       })
       toast.success('Announcement published')
       navigate('/notifications')
@@ -36,12 +37,25 @@ export default function CreateAnnouncementPage() {
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">Create Announcement</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Send an announcement to all users as a notification.
+            Choose who should receive this announcement before publishing it.
           </p>
         </div>
 
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Send To</label>
+              <select
+                className="input"
+                value={form.audience}
+                onChange={e => setForm(current => ({ ...current, audience: e.target.value }))}
+              >
+                <option value="ALL">All</option>
+                <option value="USER">Users</option>
+                <option value="TECHNICIAN">Technicians</option>
+              </select>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input

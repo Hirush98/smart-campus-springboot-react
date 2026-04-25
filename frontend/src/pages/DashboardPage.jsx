@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
+import { notificationService } from '../services/api'
+import { BellAlertIcon } from '@heroicons/react/24/outline'
 
 const cards = [
   { title: 'Resources',  desc: 'Browse halls, labs & equipment',  href: '/resources',      color: 'bg-blue-500' },
@@ -11,6 +14,20 @@ const cards = [
 
 export default function DashboardPage() {
   const { user, isAdmin } = useAuth()
+  const [announcements, setAnnouncements] = useState([])
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true)
+
+  useEffect(() => {
+    notificationService.getAll()
+      .then(res => {
+        const recentAnnouncements = res.data
+          .filter(notification => notification.type === 'ANNOUNCEMENT')
+          .slice(0, 3)
+        setAnnouncements(recentAnnouncements)
+      })
+      .catch(() => setAnnouncements([]))
+      .finally(() => setLoadingAnnouncements(false))
+  }, [])
 
   return (
     <Layout>
@@ -34,6 +51,58 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-500 mt-0.5">{card.desc}</p>
           </Link>
         ))}
+      </div>
+
+      <div className="card mb-8 border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+              <BellAlertIcon className="h-4 w-4" />
+              Recent Announcements
+            </div>
+            <h2 className="mt-3 text-xl font-semibold text-gray-900">Latest campus updates</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Important announcements shared with your role appear here.
+            </p>
+          </div>
+          <Link to="/notifications" className="text-sm font-medium text-blue-600 hover:underline">
+            View all
+          </Link>
+        </div>
+
+        {loadingAnnouncements ? (
+          <div className="flex justify-center py-10">
+            <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
+          </div>
+        ) : announcements.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-6 py-10 text-center">
+            <p className="text-sm font-medium text-slate-600">No recent announcements</p>
+            <p className="text-xs text-slate-400 mt-1">
+              New announcements for your role will show up here automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {announcements.map(announcement => (
+              <div
+                key={announcement.id}
+                className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="badge bg-indigo-100 text-indigo-700">Announcement</span>
+                  {!announcement.read && (
+                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                  )}
+                </div>
+                <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
+                <p className="text-sm text-gray-600 mt-1">{announcement.message}</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  {new Date(announcement.createdAt).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {isAdmin && (
