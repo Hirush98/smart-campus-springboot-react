@@ -97,8 +97,8 @@ export const ticketService = {
   updateStatus:  (id, s, n)    => api.patch(`/tickets/${id}/status`, { status: s, notes: n }),
   assign:        (id, tId, tN) => api.patch(`/tickets/${id}/assign`, { technicianId: tId, technicianName: tN }),
   getComments:   (id)          => api.get(`/tickets/${id}/comments`),
-  addComment:    (id, content) => api.post(`/tickets/${id}/comments`, { content }),
-  updateComment: (tid, cid, c) => api.put(`/tickets/${tid}/comments/${cid}`, { content: c }),
+  addComment:    (id, data)    => api.post(`/tickets/${id}/comments`, data),
+  updateComment: (tid, cid, d) => api.put(`/tickets/${tid}/comments/${cid}`, d),
   deleteComment: (tid, cid)    => api.delete(`/tickets/${tid}/comments/${cid}`),
 }
 

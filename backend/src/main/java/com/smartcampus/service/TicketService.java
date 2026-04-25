@@ -146,9 +146,10 @@ public class TicketService {
 
     private void validateStatusTransition(TicketStatus current, TicketStatus next) {
         boolean valid = switch (current) {
-            case OPEN -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED || next == TicketStatus.CANCELLED;
-            case IN_PROGRESS -> next == TicketStatus.RESOLVED || next == TicketStatus.REJECTED || next == TicketStatus.CANCELLED;
-            case RESOLVED -> next == TicketStatus.CLOSED || next == TicketStatus.CANCELLED;
+            case OPEN -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED || next == TicketStatus.CANCELLED || next == TicketStatus.CLOSED;
+            case IN_PROGRESS -> next == TicketStatus.RESOLVED || next == TicketStatus.REJECTED || next == TicketStatus.CANCELLED || next == TicketStatus.CLOSED;
+            case RESOLVED -> next == TicketStatus.CLOSED || next == TicketStatus.CANCELLED || next == TicketStatus.IN_PROGRESS;
+            case REJECTED, CANCELLED -> next == TicketStatus.OPEN || next == TicketStatus.CLOSED;
             default -> false;
         };
         if (!valid) {

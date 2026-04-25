@@ -3,7 +3,8 @@ import { ticketService } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
 import toast from 'react-hot-toast'
-import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, PhotoIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid'
 
 const STATUS_COLORS = {
   OPEN:        'bg-blue-100 text-blue-800',
@@ -324,6 +325,13 @@ export default function TicketsPage() {
                     <span className={`badge ${PRIORITY_COLORS[selected.priority]}`}>{selected.priority}</span>
                     <span className={`badge ${STATUS_COLORS[selected.status]}`}>{selected.status.replace('_',' ')}</span>
                     
+                    {selected.status === 'CLOSED' && (
+                      <div className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-xl border border-green-100 animate-bounce-short">
+                        <CheckCircleSolid className="h-4 w-4" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Ticket Resolved Successfully</span>
+                      </div>
+                    )}
+                    
                     {(isAdmin || isTechnician) && selected.status !== 'CLOSED' && selected.status !== 'CANCELLED' && (
                       <select 
                         className="text-[10px] bg-white border border-slate-200 rounded px-1 py-0.5 outline-none hover:bg-slate-50 cursor-pointer"
@@ -379,6 +387,13 @@ export default function TicketsPage() {
                   </svg>
                   Discussion ({comments.length})
                 </h3>
+
+                {selected.status === 'CLOSED' && selected.resolutionNotes && (
+                  <div className="mb-4 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
+                    <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">Resolution Notes</p>
+                    <p className="text-xs text-slate-700 italic">"{selected.resolutionNotes}"</p>
+                  </div>
+                )}
                 <div className="space-y-4 max-h-[300px] overflow-y-auto mb-6 pr-2 scrollbar-hide">
                   {comments.length === 0 ? (
                     <p className="text-xs text-slate-400 italic text-center py-4">No comments yet.</p>
@@ -410,10 +425,17 @@ export default function TicketsPage() {
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                   />
-                  <button type="submit" className="btn-primary p-2 flex-shrink-0">
+                  <button 
+                    type="submit" 
+                    className="btn-primary p-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!newComment.trim() || selected.status === 'CLOSED'}
+                  >
                      <PlusIcon className="h-5 w-5" />
                   </button>
                 </form>
+                {selected.status === 'CLOSED' && (
+                  <p className="text-[10px] text-center text-slate-400 mt-2">Ticket is closed. No more comments allowed.</p>
+                )}
               </div>
             </div>
           ) : (
