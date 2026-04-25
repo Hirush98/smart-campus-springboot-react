@@ -79,7 +79,7 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
     if (resource) {
       setForm({
         ...resource,
-        capacity: resource.capacity || '',
+        capacity: resource.type === 'EQUIPMENT' ? '1' : (resource.capacity || ''),
         availabilityWindows: parseAvailability(resource.availabilityWindows || []),
         serialNumber: resource.serialNumber || '',
         manufacturer: resource.manufacturer || '',
@@ -201,7 +201,13 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
               <select
                 className="input"
                 value={form.type}
-                onChange={e => set('type', e.target.value)}
+                onChange={e => {
+                  const value = e.target.value
+                  set('type', value)
+                  if (value === 'EQUIPMENT') {
+                    set('capacity', '1')
+                  }
+                }}
               >
                 {TYPE_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -218,6 +224,7 @@ export default function ResourceModal({ show, onClose, onSubmit, resource }) {
                 className="input"
                 min="0"
                 value={form.capacity}
+                disabled={form.type === 'EQUIPMENT'}
                 onChange={e => {
                   const val = e.target.value
                   if (val === '' || parseInt(val) >= 0) set('capacity', val)
