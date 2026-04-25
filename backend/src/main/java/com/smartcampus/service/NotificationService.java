@@ -3,13 +3,18 @@ package com.smartcampus.service;
 import com.smartcampus.model.Booking;
 import com.smartcampus.model.Notification;
 import com.smartcampus.model.Ticket;
+import com.smartcampus.model.User;
 import com.smartcampus.model.enums.NotificationType;
 import com.smartcampus.repository.NotificationRepository;
 import com.smartcampus.repository.TicketRepository;
+import com.smartcampus.repository.UserRepository;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Module D - Notifications
@@ -21,6 +26,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final TicketRepository ticketRepository;
+    private final UserRepository userRepository;
 
     public List<Notification> getNotificationsForUser(String userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -41,6 +47,67 @@ public class NotificationService {
         List<Notification> unread = notificationRepository.findByUserIdAndRead(userId, false);
         unread.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unread);
+    }
+
+    public void createAnnouncement(String title, String message) {
+        String announcementId = UUID.randomUUID().toString();
+        List<User> users = userRepository.findAll();
+        List<Notification> announcements = new ArrayList<>();
+
+        for (User user : users) {
+            announcements.add(Notification.builder()
+                    .userId(user.getId())
+                    .title(title)
+                    .message(message)
+                    .type(NotificationType.ANNOUNCEMENT)
+                    .referenceId(announcementId)
+                    .referenceType("ANNOUNCEMENT")
+                    .read(false)
+                    .build());
+        }
+
+        notificationRepository.saveAll(announcements);
+    }
+
+    public AnnouncementDetails getAnnouncement(String announcementId) {
+        Notification notification = findAnnouncementRepresentative(announcementId);
+        return new AnnouncementDetails(
+                notification.getReferenceId() != null ? notification.getReferenceId() : notification.getId(),
+                notification.getTitle(),
+                notification.getMessage()
+        );
+    }
+
+    public void updateAnnouncement(String announcementId, String title, String message) {
+        Notification representative = findAnnouncementRepresentative(announcementId);
+
+        if (representative.getReferenceId() != null) {
+            List<Notification> notifications = notificationRepository.findByReferenceTypeAndReferenceId(
+                    "ANNOUNCEMENT", representative.getReferenceId());
+            notifications.forEach(n -> {
+                n.setTitle(title);
+                n.setMessage(message);
+            });
+            notificationRepository.saveAll(notifications);
+            return;
+        }
+
+        representative.setTitle(title);
+        representative.setMessage(message);
+        notificationRepository.save(representative);
+    }
+
+    public void deleteAnnouncement(String announcementId) {
+        Notification representative = findAnnouncementRepresentative(announcementId);
+
+        if (representative.getReferenceId() != null) {
+            List<Notification> notifications = notificationRepository.findByReferenceTypeAndReferenceId(
+                    "ANNOUNCEMENT", representative.getReferenceId());
+            notificationRepository.deleteAll(notifications);
+            return;
+        }
+
+        notificationRepository.delete(representative);
     }
 
     // --- Booking notifications ---
@@ -98,5 +165,19 @@ public class NotificationService {
                 .read(false)
                 .build();
         notificationRepository.save(notification);
+    }
+
+    private Notification findAnnouncementRepresentative(String announcementId) {
+        return notificationRepository.findFirstByReferenceTypeAndReferenceId("ANNOUNCEMENT", announcementId)
+                .or(() -> notificationRepository.findById(announcementId)
+                        .filter(notification -> notification.getType() == NotificationType.ANNOUNCEMENT))
+                .orElseThrow(() -> new RuntimeException("Announcement not found"));
+    }
+
+    @Data
+    public static class AnnouncementDetails {
+        private final String id;
+        private final String title;
+        private final String message;
     }
 }

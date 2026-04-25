@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate  = useNavigate()
+  const googleAuthUrl = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/oauth2/authorization/google`
   const [form, setForm]       = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
 
@@ -75,7 +76,7 @@ export default function LoginPage() {
               </div>
             </div>
             <a
-              href="/oauth2/authorization/google"
+              href={googleAuthUrl}
               className="mt-4 flex items-center justify-center gap-3 w-full border border-gray-300
                          rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50
                          transition-colors"

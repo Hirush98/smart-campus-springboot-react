@@ -1,6 +1,7 @@
 package com.smartcampus.config;
 
 import com.smartcampus.security.jwt.JwtAuthenticationFilter;
+import com.smartcampus.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOriginsStr;
@@ -66,8 +68,8 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-                // Fully public — no token needed
-                .requestMatchers("/api/auth/**").permitAll()
+                // Public auth endpoints
+                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/resources/**").permitAll()
 
                 // OAuth2 redirect endpoints (browser flow only)
@@ -84,7 +86,7 @@ public class SecurityConfig {
                     endpoint.baseUri("/oauth2/authorization"))
                 .redirectionEndpoint(endpoint ->
                     endpoint.baseUri("/login/oauth2/code/*"))
-                .defaultSuccessUrl("http://localhost:5173/oauth2/callback", true)
+                .successHandler(oAuth2AuthenticationSuccessHandler)
                 .failureUrl("http://localhost:5173/login?error=oauth2")
             )
 
