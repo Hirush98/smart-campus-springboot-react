@@ -13,10 +13,12 @@
     "@heroicons/react": "^2.1.4",
     "axios": "^1.7.2",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.38.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.24.0"
+    "react-router-dom": "^6.24.0",
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

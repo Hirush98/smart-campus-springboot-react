@@ -5,8 +5,8 @@ import com.smartcampus.security.jwt.UserPrincipal;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -20,10 +20,9 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final OAuth2UserService oAuth2UserService;
     private final JwtTokenProvider tokenProvider;
 
-    @Value("${app.oauth2.redirect-uri}")
+    @Value("${app.oauth2.redirect-uri:http://localhost:5173/oauth2/callback}")
     private String redirectUri;
 
     @Override
@@ -33,23 +32,26 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             Authentication authentication
     ) throws IOException, ServletException {
         try {
-            UserPrincipal principal = oAuth2UserService.processOAuth2User(authentication);
+            UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             String token = tokenProvider.generateToken(principal);
 
-            String targetUrl = UriComponentsBuilder
-                    .fromUriString(redirectUri)
+            String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                     .queryParam("token", token)
                     .build()
                     .toUriString();
+
+            if (response.isCommitted()) {
+                log.debug("Response already committed. Unable to redirect to {}", targetUrl);
+                return;
+            }
 
             getRedirectStrategy().sendRedirect(request, response, targetUrl);
         } catch (Exception ex) {
             log.error("Google OAuth login failed after authentication", ex);
 
             String failureUrl = UriComponentsBuilder
-                    .fromUriString(redirectUri)
-                    .replacePath("/login")
-                    .replaceQuery("error=oauth2")
+                    .fromUriString("http://localhost:5173/login")
+                    .queryParam("error", "oauth2")
                     .build()
                     .toUriString();
 

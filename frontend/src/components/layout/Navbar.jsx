@@ -5,12 +5,12 @@ import { notificationService } from '../../services/api'
 import {
   ArrowRightStartOnRectangleIcon,
   BellIcon,
+  Bars3Icon,
   BuildingOffice2Icon,
   CalendarDaysIcon,
   Squares2X2Icon,
   TicketIcon,
   WrenchScrewdriverIcon,
-  Bars3Icon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 
@@ -32,25 +32,22 @@ export default function Navbar() {
   ]
 
   useEffect(() => {
-    if (user) {
-      const refreshNotifications = () => {
-        notificationService.getUnreadCount()
-          .then(res => setUnreadCount(res.data.count))
-          .catch(() => {})
+    if (!user) return
 
-        notificationService.getAll()
-          .then(res => setNotifications(res.data.slice(0, 5)))
-          .catch(() => {})
-      }
+    const refreshNotifications = () => {
+      notificationService.getUnreadCount()
+        .then(res => setUnreadCount(res.data.count))
+        .catch(() => {})
 
-      refreshNotifications()
-
-      // Poll every 30 seconds
-      const interval = setInterval(() => {
-        refreshNotifications()
-      }, 30000)
-      return () => clearInterval(interval)
+      notificationService.getAll()
+        .then(res => setNotifications(res.data.slice(0, 5)))
+        .catch(() => {})
     }
+
+    refreshNotifications()
+
+    const interval = setInterval(refreshNotifications, 30000)
+    return () => clearInterval(interval)
   }, [user])
 
   useEffect(() => {
@@ -100,8 +97,7 @@ export default function Navbar() {
         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
     }`
 
-  const roleLabel = user?.roles?.map(role => role.authority)
-    ?.includes('ROLE_ADMIN')
+  const roleLabel = user?.roles?.map(role => role.authority)?.includes('ROLE_ADMIN')
     ? 'Admin'
     : user?.roles?.map(role => role.authority)?.includes('ROLE_TECHNICIAN')
       ? 'Technician'
