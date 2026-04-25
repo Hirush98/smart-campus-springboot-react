@@ -53,11 +53,21 @@ public class UserPrincipal implements UserDetails, OAuth2User {
         this.attributes = attributes;
     }
 
+    public String getDisplayName() {
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+        if (email != null && !email.isBlank()) {
+            return email;
+        }
+        return id;
+    }
+
     @Override public String getUsername() { return email; }
     @Override public boolean isAccountNonExpired() { return true; }
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled() { return true; }
     @Override public Map<String, Object> getAttributes() { return attributes; }
-    @Override public String getName() { return id; }
+    @Override public String getName() { return getDisplayName(); }
 }

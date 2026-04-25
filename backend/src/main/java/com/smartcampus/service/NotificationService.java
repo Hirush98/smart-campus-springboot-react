@@ -99,9 +99,13 @@ public class NotificationService {
     }
 
     public void notifyBookingRejected(Booking booking) {
+        String reasonSuffix = (booking.getRejectionReason() == null || booking.getRejectionReason().isBlank())
+                ? ""
+                : " Reason: " + booking.getRejectionReason();
+
         send(booking.getUserId(),
              "Booking Rejected",
-             "Your booking for " + booking.getResourceName() + " has been rejected. Reason: " + booking.getRejectionReason(),
+             "Your booking for " + booking.getResourceName() + " on " + booking.getBookingDate() + " has been rejected." + reasonSuffix,
              NotificationType.BOOKING_REJECTED,
              booking.getId(), "BOOKING");
     }
