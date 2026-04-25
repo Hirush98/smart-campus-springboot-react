@@ -153,6 +153,41 @@ export default function TicketsPage() {
         </button>
       </div>
 
+      {/* Stats Summary Section */}
+      {!loading && !showForm && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 animate-fade-in">
+          <div className="bg-white/60 backdrop-blur-md border border-white rounded-3xl p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+              <PlusIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900">{tickets.length}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Reports</p>
+            </div>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-md border border-white rounded-3xl p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="h-12 w-12 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-600">
+              <MagnifyingGlassIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900">{tickets.filter(t => ['OPEN', 'IN_PROGRESS'].includes(t.status)).length}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Tickets</p>
+            </div>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-md border border-white rounded-3xl p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="h-12 w-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
+              <CheckCircleIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900">{tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Completed</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* New ticket form (Glassmorphism) */}
       {showForm && (
         <div className="card mb-8 animate-fade-in border-blue-100 bg-blue-50/30">
@@ -359,6 +394,15 @@ export default function TicketsPage() {
                     )}
                   </div>
                 </div>
+                {(selected.status === 'RESOLVED' || selected.status === 'CLOSED') && (
+                  <div className="bg-green-50/50 rounded-2xl p-4 border border-green-100/50 animate-bounce-short">
+                    <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-1">Efficiency Metric</p>
+                    <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Resolved in {Math.max(1, Math.ceil((new Date(selected.updatedAt) - new Date(selected.createdAt)) / (1000 * 60 * 60 * 24)))} Day(s)
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-1">Description</p>
                   <p className="text-sm text-slate-600 leading-relaxed">{selected.description}</p>
