@@ -25,7 +25,9 @@ export default function AdminPage() {
       resourceService.getAll({}),
     ]).then(([b, t, r]) => {
       setBookings(b.data)
-      setTickets(t.data)
+      // Extract tickets from HATEOAS structure
+      const ticketData = t.data._embedded?.ticketList || t.data._embedded?.tickets || (Array.isArray(t.data) ? t.data : [])
+      setTickets(ticketData)
       setResources(r.data)
     }).catch(() => toast.error('Failed to load data'))
     .finally(() => setLoading(false))
@@ -59,7 +61,8 @@ export default function AdminPage() {
       await ticketService.assign(id, technicianId, technicianName)
       toast.success('Technician assigned')
       const res = await ticketService.getAll()
-      setTickets(res.data)
+      const ticketData = res.data._embedded?.ticketList || res.data._embedded?.tickets || (Array.isArray(res.data) ? res.data : [])
+      setTickets(ticketData)
     } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
   }
 

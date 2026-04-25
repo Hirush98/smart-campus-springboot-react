@@ -50,7 +50,6 @@ public class Ticket {
     private String location;
 
     // Reporter
-    @NotNull
     private String reportedBy;
     private String reporterName;
 
