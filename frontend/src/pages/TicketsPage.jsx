@@ -334,6 +334,7 @@ export default function TicketsPage() {
                         {selected.status === 'OPEN' && <option value="IN_PROGRESS">Set In Progress</option>}
                         {selected.status === 'OPEN' && <option value="REJECTED">Reject Ticket</option>}
                         {selected.status === 'IN_PROGRESS' && <option value="RESOLVED">Mark Resolved</option>}
+                        {selected.status === 'IN_PROGRESS' && <option value="CLOSED">Close Ticket</option>}
                         {selected.status === 'IN_PROGRESS' && <option value="REJECTED">Reject Ticket</option>}
                         {selected.status === 'RESOLVED' && <option value="CLOSED">Final Close</option>}
                       </select>

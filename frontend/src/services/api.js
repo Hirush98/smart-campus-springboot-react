@@ -67,4 +67,5 @@ export const authService = {
   login:    (email, pw) => api.post('/auth/login', { email, password: pw }),
   register: (name, email, pw) => api.post('/auth/register', { name, email, password: pw }),
   me:       ()          => api.get('/auth/me'),
+  getTechnicians: ()    => api.get('/auth/technicians'),
 }
