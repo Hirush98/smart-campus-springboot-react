@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { resourceService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import toast from 'react-hot-toast'
@@ -54,6 +54,18 @@ export default function ResourcesPage() {
       setLoading(false)
     }
   }
+
+  const filteredResources = useMemo(() => {
+    const minCapacity = parseInt(filters.minCapacity, 10)
+    return resources.filter(resource => {
+      if (filters.type && resource.type !== filters.type) return false
+      if (filters.location && !resource.location?.toLowerCase().includes(filters.location.trim().toLowerCase())) return false
+      if (!Number.isNaN(minCapacity) && filters.minCapacity !== '' && resource.capacity != null) {
+        return resource.capacity >= minCapacity
+      }
+      return true
+    })
+  }, [resources, filters])
 
   useEffect(() => {
     fetchResources()
@@ -182,11 +194,11 @@ export default function ResourcesPage() {
         <div className="flex justify-center py-16">
           <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
         </div>
-      ) : resources.length === 0 ? (
+      ) : filteredResources.length === 0 ? (
         <div className="text-center py-16 text-gray-400">No resources found.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {resources.map(r => (
+          {filteredResources.map(r => (
             <div key={r.id} className="card hover:shadow-lg transition-all flex flex-col h-full overflow-hidden p-0">
               {/* Image Preview */}
               <div className="aspect-video w-full bg-gray-100 relative overflow-hidden group">
