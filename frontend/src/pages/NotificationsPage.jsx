@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { notificationService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import toast from 'react-hot-toast'
-import { BellIcon } from '@heroicons/react/24/outline'
+import { BellIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { useAuth } from '../context/AuthContext'
 
 const TYPE_COLORS = {
+  ANNOUNCEMENT:          'bg-indigo-100 text-indigo-700',
   BOOKING_APPROVED:      'bg-green-100 text-green-700',
   BOOKING_REJECTED:      'bg-red-100 text-red-700',
   BOOKING_CANCELLED:     'bg-gray-100 text-gray-600',
@@ -15,6 +18,8 @@ const TYPE_COLORS = {
 }
 
 export default function NotificationsPage() {
+  const { isAdmin } = useAuth()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading]             = useState(true)
 
@@ -27,7 +32,19 @@ export default function NotificationsPage() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchNotifications() }, [])
+  useEffect(() => {
+    fetchNotifications()
+
+    const interval = setInterval(fetchNotifications, 30000)
+    const handleFocus = () => fetchNotifications()
+
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [])
 
   const handleMarkRead = async (id) => {
     try {
@@ -46,6 +63,26 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.read).length
 
+  const handleAddAnnouncement = () => {
+    navigate('/admin/announcements/new')
+  }
+
+  const handleEditAnnouncement = (announcementId) => {
+    navigate(`/admin/announcements/${announcementId}/edit`)
+  }
+
+  const handleDeleteAnnouncement = async (announcementId) => {
+    if (!window.confirm('Delete this announcement for all users?')) return
+
+    try {
+      await notificationService.deleteAnnouncement(announcementId)
+      setNotifications(ns => ns.filter(n => (n.referenceId || n.id) !== announcementId))
+      toast.success('Announcement deleted')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete announcement')
+    }
+  }
+
   return (
     <Layout>
       <div className="mb-6 flex items-center justify-between">
@@ -55,11 +92,19 @@ export default function NotificationsPage() {
             {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <button className="btn-secondary text-sm" onClick={handleMarkAllRead}>
-            Mark all as read
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button className="btn-primary text-sm flex items-center gap-2" onClick={handleAddAnnouncement}>
+              <PlusIcon className="h-4 w-4" />
+              Add Announcement
+            </button>
+          )}
+          {unreadCount > 0 && (
+            <button className="btn-secondary text-sm" onClick={handleMarkAllRead}>
+              Mark all as read
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -94,14 +139,34 @@ export default function NotificationsPage() {
                     {new Date(n.createdAt).toLocaleString()}
                   </p>
                 </div>
-                {!n.read && (
-                  <button
-                    onClick={() => handleMarkRead(n.id)}
-                    className="text-xs text-blue-600 hover:underline flex-shrink-0"
-                  >
-                    Mark read
-                  </button>
-                )}
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  {isAdmin && n.type === 'ANNOUNCEMENT' && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleEditAnnouncement(n.referenceId || n.id)}
+                        className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        <PencilSquareIcon className="h-4 w-4" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAnnouncement(n.referenceId || n.id)}
+                        className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                  {!n.read && (
+                    <button
+                      onClick={() => handleMarkRead(n.id)}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Mark read
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

@@ -87,3 +87,12 @@
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
+
+@keyframes bounce-short {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-bounce-short {
+  animation: bounce-short 1s ease-in-out infinite;
+}

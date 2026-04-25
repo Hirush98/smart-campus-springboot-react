@@ -27,10 +27,7 @@ public class Comment {
     @Id
     private String id;
 
-    @NotBlank
     private String ticketId;
-
-    @NotBlank
     private String authorId;
     private String authorName;
 

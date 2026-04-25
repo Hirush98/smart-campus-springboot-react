@@ -3,7 +3,8 @@ import { ticketService } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
 import toast from 'react-hot-toast'
-import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, PhotoIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid'
 
 const STATUS_COLORS = {
   OPEN:        'bg-blue-100 text-blue-800',
@@ -151,6 +152,41 @@ export default function TicketsPage() {
           <span>{showForm ? 'Cancel Report' : 'Report Incident'}</span>
         </button>
       </div>
+
+      {/* Stats Summary Section */}
+      {!loading && !showForm && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 animate-fade-in">
+          <div className="bg-white/60 backdrop-blur-md border border-white rounded-3xl p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+              <PlusIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900">{tickets.length}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Reports</p>
+            </div>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-md border border-white rounded-3xl p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="h-12 w-12 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-600">
+              <MagnifyingGlassIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900">{tickets.filter(t => ['OPEN', 'IN_PROGRESS'].includes(t.status)).length}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Tickets</p>
+            </div>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-md border border-white rounded-3xl p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="h-12 w-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
+              <CheckCircleIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-slate-900">{tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Completed</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New ticket form (Glassmorphism) */}
       {showForm && (
@@ -324,6 +360,13 @@ export default function TicketsPage() {
                     <span className={`badge ${PRIORITY_COLORS[selected.priority]}`}>{selected.priority}</span>
                     <span className={`badge ${STATUS_COLORS[selected.status]}`}>{selected.status.replace('_',' ')}</span>
                     
+                    {selected.status === 'CLOSED' && (
+                      <div className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-xl border border-green-100 animate-bounce-short">
+                        <CheckCircleSolid className="h-4 w-4" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Ticket Resolved Successfully</span>
+                      </div>
+                    )}
+                    
                     {(isAdmin || isTechnician) && selected.status !== 'CLOSED' && selected.status !== 'CANCELLED' && (
                       <select 
                         className="text-[10px] bg-white border border-slate-200 rounded px-1 py-0.5 outline-none hover:bg-slate-50 cursor-pointer"
@@ -334,6 +377,7 @@ export default function TicketsPage() {
                         {selected.status === 'OPEN' && <option value="IN_PROGRESS">Set In Progress</option>}
                         {selected.status === 'OPEN' && <option value="REJECTED">Reject Ticket</option>}
                         {selected.status === 'IN_PROGRESS' && <option value="RESOLVED">Mark Resolved</option>}
+                        {selected.status === 'IN_PROGRESS' && <option value="CLOSED">Close Ticket</option>}
                         {selected.status === 'IN_PROGRESS' && <option value="REJECTED">Reject Ticket</option>}
                         {selected.status === 'RESOLVED' && <option value="CLOSED">Final Close</option>}
                       </select>
@@ -350,6 +394,15 @@ export default function TicketsPage() {
                     )}
                   </div>
                 </div>
+                {(selected.status === 'RESOLVED' || selected.status === 'CLOSED') && (
+                  <div className="bg-green-50/50 rounded-2xl p-4 border border-green-100/50 animate-bounce-short">
+                    <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-1">Efficiency Metric</p>
+                    <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Resolved in {Math.max(1, Math.ceil((new Date(selected.updatedAt) - new Date(selected.createdAt)) / (1000 * 60 * 60 * 24)))} Day(s)
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-1">Description</p>
                   <p className="text-sm text-slate-600 leading-relaxed">{selected.description}</p>
@@ -378,6 +431,13 @@ export default function TicketsPage() {
                   </svg>
                   Discussion ({comments.length})
                 </h3>
+
+                {selected.status === 'CLOSED' && selected.resolutionNotes && (
+                  <div className="mb-4 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
+                    <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">Resolution Notes</p>
+                    <p className="text-xs text-slate-700 italic">"{selected.resolutionNotes}"</p>
+                  </div>
+                )}
                 <div className="space-y-4 max-h-[300px] overflow-y-auto mb-6 pr-2 scrollbar-hide">
                   {comments.length === 0 ? (
                     <p className="text-xs text-slate-400 italic text-center py-4">No comments yet.</p>
@@ -409,10 +469,17 @@ export default function TicketsPage() {
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                   />
-                  <button type="submit" className="btn-primary p-2 flex-shrink-0">
+                  <button 
+                    type="submit" 
+                    className="btn-primary p-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!newComment.trim() || selected.status === 'CLOSED'}
+                  >
                      <PlusIcon className="h-5 w-5" />
                   </button>
                 </form>
+                {selected.status === 'CLOSED' && (
+                  <p className="text-[10px] text-center text-slate-400 mt-2">Ticket is closed. No more comments allowed.</p>
+                )}
               </div>
             </div>
           ) : (

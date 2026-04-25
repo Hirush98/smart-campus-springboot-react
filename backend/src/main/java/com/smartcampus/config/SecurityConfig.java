@@ -59,16 +59,23 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/status").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/resources/**").permitAll()
+                .requestMatchers("/api/uploads/**").permitAll()
+                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                 .anyRequest().authenticated()
             )
 
             .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(endpoint ->
+                    endpoint.baseUri("/oauth2/authorization"))
+                .redirectionEndpoint(endpoint ->
+                    endpoint.baseUri("/login/oauth2/code/*"))
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
                 )
                 .successHandler(oAuth2AuthenticationSuccessHandler)
+                .failureUrl("http://localhost:5173/login?error=oauth2")
             )
 
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

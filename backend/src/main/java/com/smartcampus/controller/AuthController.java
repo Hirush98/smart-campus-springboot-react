@@ -10,11 +10,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.constraints.Email;
@@ -66,10 +68,16 @@ public class AuthController {
                     .body(Map.of("message", "Email is already registered"));
         }
 
-        // Simple logic for assignment demo: Assign ADMIN role if email contains 'admin'
-        Set<Role> roles = request.getEmail().toLowerCase().contains("admin") 
-                ? Set.of(Role.ADMIN, Role.USER) 
-                : Set.of(Role.USER);
+        // Simple logic for assignment demo: Assign roles based on email
+        String emailLower = request.getEmail().toLowerCase();
+        Set<Role> roles;
+        if (emailLower.contains("admin")) {
+            roles = Set.of(Role.ADMIN, Role.USER);
+        } else if (emailLower.contains("tech")) {
+            roles = Set.of(Role.TECHNICIAN, Role.USER);
+        } else {
+            roles = Set.of(Role.USER);
+        }
 
         User user = User.builder()
                 .name(request.getName())
@@ -106,12 +114,27 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(
             @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+
         return ResponseEntity.ok(Map.of(
                 "id", principal.getId(),
                 "name", principal.getName(),
                 "email", principal.getEmail(),
                 "roles", principal.getAuthorities()
         ));
+    }
+
+    @GetMapping("/technicians")
+    public ResponseEntity<?> getTechnicians() {
+        return ResponseEntity.ok(userRepository.findAll().stream()
+                .filter(u -> u.getRoles().contains(Role.TECHNICIAN))
+                .map(u -> Map.of(
+                        "id", u.getId(),
+                        "name", u.getName()
+                ))
+                .toList());
     }
 
     @Data

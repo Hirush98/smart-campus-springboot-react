@@ -1,16 +1,34 @@
 import { useState, useEffect } from 'react'
-import { bookingService, ticketService, resourceService } from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { bookingService, ticketService, resourceService, authService, notificationService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import toast from 'react-hot-toast'
 import ResourceModal from '../components/resources/ResourceModal'
 import QRModal from '../components/resources/QRModal'
 import ImageUploadManager from '../components/resources/ImageUploadManager'
+import { BellIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+
+const TYPE_COLORS = {
+  ANNOUNCEMENT:          'bg-indigo-100 text-indigo-700',
+  BOOKING_APPROVED:      'bg-green-100 text-green-700',
+  BOOKING_REJECTED:      'bg-red-100 text-red-700',
+  BOOKING_CANCELLED:     'bg-gray-100 text-gray-600',
+  TICKET_STATUS_CHANGED: 'bg-blue-100 text-blue-700',
+  TICKET_ASSIGNED:       'bg-purple-100 text-purple-700',
+  TICKET_COMMENT_ADDED:  'bg-yellow-100 text-yellow-700',
+  TICKET_RESOLVED:       'bg-green-100 text-green-700',
+}
 
 export default function AdminPage() {
+  const navigate = useNavigate()
   const [tab, setTab]           = useState('bookings')
   const [bookings, setBookings] = useState([])
   const [tickets, setTickets]   = useState([])
   const [resources, setResources] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [technicians, setTechnicians] = useState([])
+  const [assigningTicketId, setAssigningTicketId] = useState(null)
+  const [selectedTechId, setSelectedTechId] = useState('')
   const [loading, setLoading]   = useState(true)
 
   // Modals state
@@ -23,12 +41,16 @@ export default function AdminPage() {
       bookingService.getAll(),
       ticketService.getAll(),
       resourceService.getAll({}),
-    ]).then(([b, t, r]) => {
+      notificationService.getAll(),
+      authService.getTechnicians(),
+    ]).then(([b, t, r, n, techRes]) => {
       setBookings(b.data)
       // Extract tickets from HATEOAS structure
       const ticketData = t.data._embedded?.ticketList || t.data._embedded?.tickets || (Array.isArray(t.data) ? t.data : [])
       setTickets(ticketData)
       setResources(r.data)
+      setNotifications(n.data)
+      setTechnicians(techRes.data)
     }).catch(() => toast.error('Failed to load data'))
     .finally(() => setLoading(false))
   }, [])
@@ -54,15 +76,21 @@ export default function AdminPage() {
   }
 
   const handleAssignTicket = async (id) => {
-    const technicianId   = window.prompt('Enter technician user ID:')
-    const technicianName = window.prompt('Enter technician name:')
-    if (!technicianId || !technicianName) return
+    if (!selectedTechId) {
+      toast.error('Please select a technician')
+      return
+    }
+    const tech = technicians.find(t => t.id === selectedTechId)
+    if (!tech) return
+
     try {
-      await ticketService.assign(id, technicianId, technicianName)
+      await ticketService.assign(id, tech.id, tech.name)
       toast.success('Technician assigned')
       const res = await ticketService.getAll()
       const ticketData = res.data._embedded?.ticketList || res.data._embedded?.tickets || (Array.isArray(res.data) ? res.data : [])
       setTickets(ticketData)
+      setAssigningTicketId(null)
+      setSelectedTechId('')
     } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
   }
 
@@ -71,6 +99,11 @@ export default function AdminPage() {
   const fetchResources = async () => {
     const res = await resourceService.getAll({})
     setResources(res.data)
+  }
+
+  const fetchNotifications = async () => {
+    const res = await notificationService.getAll()
+    setNotifications(res.data)
   }
 
   const handleCreateResource = async (data) => {
@@ -108,17 +141,47 @@ export default function AdminPage() {
     } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
   }
 
+  const handleMarkRead = async (id) => {
+    try {
+      await notificationService.markRead(id)
+      setNotifications(ns => ns.map(n => n.id === id ? { ...n, read: true } : n))
+    } catch {
+      toast.error('Failed to mark notification as read')
+    }
+  }
+
+  const handleAddAnnouncement = () => {
+    navigate('/admin/announcements/new')
+  }
+
+  const handleEditAnnouncement = (announcementId) => {
+    navigate(`/admin/announcements/${announcementId}/edit`)
+  }
+
+  const handleDeleteAnnouncement = async (announcementId) => {
+    if (!window.confirm('Delete this announcement for all users?')) return
+
+    try {
+      await notificationService.deleteAnnouncement(announcementId)
+      setNotifications(ns => ns.filter(n => (n.referenceId || n.id) !== announcementId))
+      toast.success('Announcement deleted')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete announcement')
+    }
+  }
+
   const tabs = [
     { id: 'bookings', label: `Bookings (${bookings.filter(b => b.status === 'PENDING').length} pending)` },
     { id: 'tickets',  label: `Tickets (${tickets.filter(t => t.status === 'OPEN').length} open)` },
     { id: 'resources',label: `Resources (${resources.length})` },
+    { id: 'notifications', label: `Notifications (${notifications.filter(n => !n.read).length} unread)` },
   ]
 
   return (
     <Layout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-        <p className="text-gray-500 text-sm mt-1">Manage bookings, tickets, and resources</p>
+        <p className="text-gray-500 text-sm mt-1">Manage bookings, tickets, resources, and notifications</p>
       </div>
 
       {/* Tab bar */}
@@ -206,12 +269,29 @@ export default function AdminPage() {
                       )}
                     </div>
                     {!t.assignedTo && t.status === 'OPEN' && (
-                      <button
-                        onClick={() => handleAssignTicket(t.id)}
-                        className="btn-secondary text-sm flex-shrink-0"
-                      >
-                        Assign
-                      </button>
+                      assigningTicketId === t.id ? (
+                        <div className="flex gap-2 items-center flex-shrink-0">
+                          <select
+                            className="input py-1 text-sm min-w-[150px]"
+                            value={selectedTechId}
+                            onChange={(e) => setSelectedTechId(e.target.value)}
+                          >
+                            <option value="" disabled>Select Tech</option>
+                            {technicians.map(tech => (
+                              <option key={tech.id} value={tech.id}>{tech.name}</option>
+                            ))}
+                          </select>
+                          <button onClick={() => handleAssignTicket(t.id)} className="btn-primary text-sm px-3 py-1">Save</button>
+                          <button onClick={() => setAssigningTicketId(null)} className="btn-secondary text-sm px-3 py-1">Cancel</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAssigningTicketId(t.id)}
+                          className="btn-secondary text-sm flex-shrink-0"
+                        >
+                          Assign
+                        </button>
+                      )
                     )}
                   </div>
                 </div>
@@ -290,6 +370,94 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Notifications tab */}
+          {tab === 'notifications' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+                  <p className="text-sm text-gray-500">
+                    Review admin notifications and manage published announcements.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={fetchNotifications} className="btn-secondary text-sm">
+                    Refresh
+                  </button>
+                  <button
+                    onClick={handleAddAnnouncement}
+                    className="btn-primary text-sm flex items-center gap-2"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add Announcement
+                  </button>
+                </div>
+              </div>
+
+              {notifications.length === 0 ? (
+                <div className="text-center py-20 text-gray-400">
+                  <BellIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>No notifications yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {notifications.map(n => (
+                    <div
+                      key={n.id}
+                      className={`card transition-all ${!n.read ? 'border-blue-200 bg-blue-50/30' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`badge ${TYPE_COLORS[n.type] || 'bg-gray-100 text-gray-600'}`}>
+                              {n.type?.replace(/_/g, ' ')}
+                            </span>
+                            {!n.read && (
+                              <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                            )}
+                          </div>
+                          <h3 className="font-semibold text-gray-900 text-sm">{n.title}</h3>
+                          <p className="text-sm text-gray-600 mt-0.5">{n.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          {n.type === 'ANNOUNCEMENT' && (
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleEditAnnouncement(n.referenceId || n.id)}
+                                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                <PencilSquareIcon className="h-4 w-4" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAnnouncement(n.referenceId || n.id)}
+                                className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                          {!n.read && (
+                            <button
+                              onClick={() => handleMarkRead(n.id)}
+                              className="text-xs text-blue-600 hover:underline"
+                            >
+                              Mark read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

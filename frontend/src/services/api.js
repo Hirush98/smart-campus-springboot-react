@@ -97,8 +97,8 @@ export const ticketService = {
   updateStatus:  (id, s, n)    => api.patch(`/tickets/${id}/status`, { status: s, notes: n }),
   assign:        (id, tId, tN) => api.patch(`/tickets/${id}/assign`, { technicianId: tId, technicianName: tN }),
   getComments:   (id)          => api.get(`/tickets/${id}/comments`),
-  addComment:    (id, content) => api.post(`/tickets/${id}/comments`, { content }),
-  updateComment: (tid, cid, c) => api.put(`/tickets/${tid}/comments/${cid}`, { content: c }),
+  addComment:    (id, data)    => api.post(`/tickets/${id}/comments`, data),
+  updateComment: (tid, cid, d) => api.put(`/tickets/${tid}/comments/${cid}`, d),
   deleteComment: (tid, cid)    => api.delete(`/tickets/${tid}/comments/${cid}`),
 }
 
@@ -107,10 +107,15 @@ export const notificationService = {
   getUnreadCount: ()   => api.get('/notifications/unread-count'),
   markRead:       (id) => api.patch(`/notifications/${id}/read`),
   markAllRead:    ()   => api.patch('/notifications/read-all'),
+  createAnnouncement: (data) => api.post('/notifications/announcements', data),
+  getAnnouncement: (id) => api.get(`/notifications/announcements/${id}`),
+  updateAnnouncement: (id, data) => api.put(`/notifications/announcements/${id}`, data),
+  deleteAnnouncement: (id) => api.delete(`/notifications/announcements/${id}`),
 }
 
 export const authService = {
   login:    (email, pw) => api.post('/auth/login', { email, password: pw }),
   register: (name, email, pw) => api.post('/auth/register', { name, email, password: pw }),
   me:       ()          => api.get('/auth/me'),
+  getTechnicians: ()    => api.get('/auth/technicians'),
 }
