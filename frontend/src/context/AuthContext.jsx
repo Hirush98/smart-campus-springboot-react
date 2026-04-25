@@ -37,6 +37,13 @@ export function AuthProvider({ children }) {
     return res.data
   }
 
+  const completeOAuthLogin = async (token) => {
+    localStorage.setItem('token', token)
+    const meRes = await api.get('/auth/me')
+    setUser(meRes.data)
+    return meRes.data
+  }
+
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
@@ -46,7 +53,9 @@ export function AuthProvider({ children }) {
   const isTechnician = user?.roles?.some(r => r.authority === 'ROLE_TECHNICIAN')
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAdmin, isTechnician }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, completeOAuthLogin, logout, isAdmin, isTechnician }}
+    >
       {children}
     </AuthContext.Provider>
   )

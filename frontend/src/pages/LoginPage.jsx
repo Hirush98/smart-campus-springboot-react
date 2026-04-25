@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const googleAuthUrl = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/oauth2/authorization/google`
   const [form, setForm] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -25,27 +26,13 @@ export default function LoginPage() {
   }
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const token = urlParams.get('token')
-    
-    if (token) {
-      localStorage.setItem('token', token)
-      // Redirect to clear the token from URL
-      window.history.replaceState({}, document.title, window.location.pathname)
-      toast.success('SSO Login Successful!')
-      // Force a reload or just navigate to dashboard
-      // The AuthProvider will pick up the token on next check or we can trigger it
-      navigate('/dashboard')
-      window.location.reload() // Fastest way to trigger AuthProvider's useEffect
-    }
-
     const newErrors = {}
     Object.keys(form).forEach(key => {
       const error = validateField(key, form[key])
       if (error) newErrors[key] = error
     })
     setErrors(newErrors)
-  }, [form, navigate])
+  }, [form])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -58,7 +45,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     const finalErrors = {}
     Object.keys(form).forEach(key => {
       const error = validateField(key, form[key])
@@ -88,7 +75,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-white to-slate-50">
       <div className="w-full max-w-[440px] animate-fade-in">
-        {/* Header */}
         <div className="text-center mb-10">
           <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-200 rotate-3 hover:rotate-0 transition-transform duration-300">
             <span className="text-white font-bold text-xl tracking-tight">SC</span>
@@ -112,7 +98,7 @@ export default function LoginPage() {
               />
               {touched.email && errors.email && <p className="error-message">{errors.email}</p>}
             </div>
-            
+
             <div>
               <div className="flex items-center justify-between mb-1.5 ml-1">
                 <label className="block text-sm font-semibold text-slate-700">Password</label>
@@ -140,7 +126,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Social Auth */}
           <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -150,9 +135,9 @@ export default function LoginPage() {
                 <span className="bg-white/90 px-3 text-slate-400 font-medium">Or continue with</span>
               </div>
             </div>
-            
+
             <a
-              href="/oauth2/authorization/google"
+              href={googleAuthUrl}
               className="mt-6 flex items-center justify-center gap-3 w-full border border-slate-200
                          rounded-xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50
                          transition-all duration-200 shadow-sm active:scale-[0.98]"
@@ -174,7 +159,7 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-        
+
         <p className="text-center text-xs text-slate-400 mt-10 font-medium">
           &copy; 2026 Smart Campus Operations Hub. Developed for Academic Excellence.
         </p>
@@ -182,4 +167,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

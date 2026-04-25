@@ -107,6 +107,10 @@ export const notificationService = {
   getUnreadCount: ()   => api.get('/notifications/unread-count'),
   markRead:       (id) => api.patch(`/notifications/${id}/read`),
   markAllRead:    ()   => api.patch('/notifications/read-all'),
+  createAnnouncement: (data) => api.post('/notifications/announcements', data),
+  getAnnouncement: (id) => api.get(`/notifications/announcements/${id}`),
+  updateAnnouncement: (id, data) => api.put(`/notifications/announcements/${id}`, data),
+  deleteAnnouncement: (id) => api.delete(`/notifications/announcements/${id}`),
 }
 
 export const authService = {
