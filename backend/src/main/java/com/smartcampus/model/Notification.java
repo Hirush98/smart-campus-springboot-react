@@ -32,6 +32,7 @@ public class Notification {
     private String message;
 
     private NotificationType type;
+    private String audience;
 
     // Reference to the related entity
     private String referenceId;   // bookingId or ticketId

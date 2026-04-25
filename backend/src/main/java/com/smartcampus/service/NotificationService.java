@@ -3,13 +3,19 @@ package com.smartcampus.service;
 import com.smartcampus.model.Booking;
 import com.smartcampus.model.Notification;
 import com.smartcampus.model.Ticket;
+import com.smartcampus.model.User;
+import com.smartcampus.model.enums.Role;
 import com.smartcampus.model.enums.NotificationType;
 import com.smartcampus.repository.NotificationRepository;
 import com.smartcampus.repository.TicketRepository;
+import com.smartcampus.repository.UserRepository;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Module D - Notifications
@@ -21,6 +27,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final TicketRepository ticketRepository;
+    private final UserRepository userRepository;
 
     public List<Notification> getNotificationsForUser(String userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -43,6 +50,44 @@ public class NotificationService {
         notificationRepository.saveAll(unread);
     }
 
+    public void createAnnouncement(String title, String message, String audience) {
+        String announcementId = UUID.randomUUID().toString();
+        saveAnnouncementsForAudience(announcementId, title, message, audience);
+    }
+
+    public AnnouncementDetails getAnnouncement(String announcementId) {
+        Notification notification = findAnnouncementRepresentative(announcementId);
+        return new AnnouncementDetails(
+                notification.getReferenceId() != null ? notification.getReferenceId() : notification.getId(),
+                notification.getTitle(),
+                notification.getMessage(),
+                notification.getAudience()
+        );
+    }
+
+    public void updateAnnouncement(String announcementId, String title, String message, String audience) {
+        Notification representative = findAnnouncementRepresentative(announcementId);
+        String resolvedAnnouncementId = representative.getReferenceId() != null
+                ? representative.getReferenceId()
+                : representative.getId();
+
+        deleteAnnouncement(resolvedAnnouncementId);
+        saveAnnouncementsForAudience(resolvedAnnouncementId, title, message, audience);
+    }
+
+    public void deleteAnnouncement(String announcementId) {
+        Notification representative = findAnnouncementRepresentative(announcementId);
+
+        if (representative.getReferenceId() != null) {
+            List<Notification> notifications = notificationRepository.findByReferenceTypeAndReferenceId(
+                    "ANNOUNCEMENT", representative.getReferenceId());
+            notificationRepository.deleteAll(notifications);
+            return;
+        }
+
+        notificationRepository.delete(representative);
+    }
+
     // --- Booking notifications ---
 
     public void notifyBookingApproved(Booking booking) {
@@ -54,9 +99,13 @@ public class NotificationService {
     }
 
     public void notifyBookingRejected(Booking booking) {
+        String reasonSuffix = (booking.getRejectionReason() == null || booking.getRejectionReason().isBlank())
+                ? ""
+                : " Reason: " + booking.getRejectionReason();
+
         send(booking.getUserId(),
              "Booking Rejected",
-             "Your booking for " + booking.getResourceName() + " has been rejected. Reason: " + booking.getRejectionReason(),
+             "Your booking for " + booking.getResourceName() + " on " + booking.getBookingDate() + " has been rejected." + reasonSuffix,
              NotificationType.BOOKING_REJECTED,
              booking.getId(), "BOOKING");
     }
@@ -98,5 +147,66 @@ public class NotificationService {
                 .read(false)
                 .build();
         notificationRepository.save(notification);
+    }
+
+    private void saveAnnouncementsForAudience(String announcementId, String title, String message, String audience) {
+        List<User> recipients = userRepository.findAll().stream()
+                .filter(user -> matchesAudience(user, audience))
+                .toList();
+
+        List<Notification> announcements = new ArrayList<>();
+
+        for (User user : recipients) {
+            announcements.add(Notification.builder()
+                    .userId(user.getId())
+                    .title(title)
+                    .message(message)
+                    .type(NotificationType.ANNOUNCEMENT)
+                    .audience(audience)
+                    .referenceId(announcementId)
+                    .referenceType("ANNOUNCEMENT")
+                    .read(false)
+                    .build());
+        }
+
+        notificationRepository.saveAll(announcements);
+    }
+
+    private boolean matchesAudience(User user, String audience) {
+        if (audience == null || audience.equalsIgnoreCase("ALL")) {
+            return true;
+        }
+
+        var roles = user.getRoles();
+        if (roles == null || roles.isEmpty()) {
+            return false;
+        }
+
+        if (audience.equalsIgnoreCase("TECHNICIAN")) {
+            return roles.contains(Role.TECHNICIAN);
+        }
+
+        if (audience.equalsIgnoreCase("USER")) {
+            return roles.contains(Role.USER)
+                    && !roles.contains(Role.ADMIN)
+                    && !roles.contains(Role.TECHNICIAN);
+        }
+
+        return false;
+    }
+
+    private Notification findAnnouncementRepresentative(String announcementId) {
+        return notificationRepository.findFirstByReferenceTypeAndReferenceId("ANNOUNCEMENT", announcementId)
+                .or(() -> notificationRepository.findById(announcementId)
+                        .filter(notification -> notification.getType() == NotificationType.ANNOUNCEMENT))
+                .orElseThrow(() -> new RuntimeException("Announcement not found"));
+    }
+
+    @Data
+    public static class AnnouncementDetails {
+        private final String id;
+        private final String title;
+        private final String message;
+        private final String audience;
     }
 }

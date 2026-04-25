@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { bookingService, resourceService, ticketService } from '../services/api'
+import { bookingService, notificationService, resourceService, ticketService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import { ActivityChart, StatusPieChart } from '../components/AnalyticsDashboard'
 import { CardSkeleton } from '../components/SkeletonLoader'
-import { 
-  BuildingOfficeIcon, 
-  TicketIcon, 
+import {
+  BellAlertIcon,
+  BuildingOfficeIcon,
   CalendarDaysIcon,
-  WrenchScrewdriverIcon 
+  TicketIcon,
+  WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline'
 
 export default function DashboardPage() {
@@ -21,19 +22,25 @@ export default function DashboardPage() {
     activeTickets: 0,
     pendingBookings: 0,
     ticketDistribution: [],
-    activityData: []
+    activityData: [],
   })
   const [loading, setLoading] = useState(true)
+  const [announcements, setAnnouncements] = useState([])
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true)
 
   useEffect(() => {
     Promise.all([
       resourceService.getAll({}),
       bookingService.getAll(),
-      ticketService.getAll()
-    ]).then(([res, bks, tks]) => {
+      ticketService.getAll(),
+      notificationService.getAll(),
+    ]).then(([res, bks, tks, notifications]) => {
       const tickets = tks.data._embedded?.ticketList || tks.data._embedded?.tickets || (Array.isArray(tks.data) ? tks.data : [])
       const bookings = bks.data || []
-      
+      const recentAnnouncements = notifications.data
+        .filter(notification => notification.type === 'ANNOUNCEMENT')
+        .slice(0, 3)
+
       setStats({
         resources: res.data.length,
         bookings: bookings.length,
@@ -42,7 +49,7 @@ export default function DashboardPage() {
         ticketDistribution: [
           { name: 'Completed', value: tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length },
           { name: 'In Progress', value: tickets.filter(t => t.status === 'IN_PROGRESS').length },
-          { name: 'Pending', value: tickets.filter(t => t.status === 'OPEN').length }
+          { name: 'Pending', value: tickets.filter(t => t.status === 'OPEN').length },
         ],
         activityData: [
           { name: 'Mon', value: 4 },
@@ -52,9 +59,15 @@ export default function DashboardPage() {
           { name: 'Fri', value: 12 },
           { name: 'Sat', value: 3 },
           { name: 'Sun', value: 2 },
-        ]
+        ],
       })
-    }).finally(() => setLoading(false))
+      setAnnouncements(recentAnnouncements)
+    }).catch(() => {
+      setAnnouncements([])
+    }).finally(() => {
+      setLoading(false)
+      setLoadingAnnouncements(false)
+    })
   }, [])
 
   const cards = [
@@ -69,19 +82,19 @@ export default function DashboardPage() {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
-      }
-    }
+        staggerChildren: 0.1,
+      },
+    },
   }
 
   const item = {
     hidden: { y: 20, opacity: 0 },
-    show: { y: 0, opacity: 1 }
+    show: { y: 0, opacity: 1 },
   }
 
   return (
     <Layout>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
@@ -92,7 +105,7 @@ export default function DashboardPage() {
         <p className="text-gray-500 mt-1">Real-time overview of campus operations</p>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         variants={container}
         initial="hidden"
         animate="show"
@@ -118,7 +131,7 @@ export default function DashboardPage() {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
@@ -131,7 +144,7 @@ export default function DashboardPage() {
           <ActivityChart data={stats.activityData} />
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.5 }}
@@ -142,8 +155,60 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
+      <div className="card mb-8 border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+              <BellAlertIcon className="h-4 w-4" />
+              Recent Announcements
+            </div>
+            <h2 className="mt-3 text-xl font-semibold text-gray-900">Latest campus updates</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Important announcements shared with your role appear here.
+            </p>
+          </div>
+          <Link to="/notifications" className="text-sm font-medium text-blue-600 hover:underline">
+            View all
+          </Link>
+        </div>
+
+        {loadingAnnouncements ? (
+          <div className="flex justify-center py-10">
+            <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
+          </div>
+        ) : announcements.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-6 py-10 text-center">
+            <p className="text-sm font-medium text-slate-600">No recent announcements</p>
+            <p className="text-xs text-slate-400 mt-1">
+              New announcements for your role will show up here automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {announcements.map(announcement => (
+              <div
+                key={announcement.id}
+                className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="badge bg-indigo-100 text-indigo-700">Announcement</span>
+                  {!announcement.read && (
+                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                  )}
+                </div>
+                <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
+                <p className="text-sm text-gray-600 mt-1">{announcement.message}</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  {new Date(announcement.createdAt).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {isAdmin && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.6 }}
@@ -153,7 +218,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-xl font-bold text-blue-900 mb-1">Administrative Intelligence</h2>
               <p className="text-sm text-blue-700 max-w-lg">
-                Your elevated access allows you to oversee all campus modules. 
+                Your elevated access allows you to oversee all campus modules.
                 Use the command center to optimize resource allocation and resolve issues.
               </p>
             </div>
