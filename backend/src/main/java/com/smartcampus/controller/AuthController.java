@@ -68,10 +68,16 @@ public class AuthController {
                     .body(Map.of("message", "Email is already registered"));
         }
 
-        // Simple logic for assignment demo: Assign ADMIN role if email contains 'admin'
-        Set<Role> roles = request.getEmail().toLowerCase().contains("admin") 
-                ? Set.of(Role.ADMIN, Role.USER) 
-                : Set.of(Role.USER);
+        // Simple logic for assignment demo: Assign roles based on email
+        String emailLower = request.getEmail().toLowerCase();
+        Set<Role> roles;
+        if (emailLower.contains("admin")) {
+            roles = Set.of(Role.ADMIN, Role.USER);
+        } else if (emailLower.contains("tech")) {
+            roles = Set.of(Role.TECHNICIAN, Role.USER);
+        } else {
+            roles = Set.of(Role.USER);
+        }
 
         User user = User.builder()
                 .name(request.getName())
@@ -118,6 +124,17 @@ public class AuthController {
                 "email", principal.getEmail(),
                 "roles", principal.getAuthorities()
         ));
+    }
+
+    @GetMapping("/technicians")
+    public ResponseEntity<?> getTechnicians() {
+        return ResponseEntity.ok(userRepository.findAll().stream()
+                .filter(u -> u.getRoles().contains(Role.TECHNICIAN))
+                .map(u -> Map.of(
+                        "id", u.getId(),
+                        "name", u.getName()
+                ))
+                .toList());
     }
 
     @Data

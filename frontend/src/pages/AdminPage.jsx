@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { bookingService, notificationService, ticketService, resourceService } from '../services/api'
+import { bookingService, ticketService, resourceService, authService, notificationService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import toast from 'react-hot-toast'
 import ResourceModal from '../components/resources/ResourceModal'
@@ -26,6 +26,9 @@ export default function AdminPage() {
   const [tickets, setTickets]   = useState([])
   const [resources, setResources] = useState([])
   const [notifications, setNotifications] = useState([])
+  const [technicians, setTechnicians] = useState([])
+  const [assigningTicketId, setAssigningTicketId] = useState(null)
+  const [selectedTechId, setSelectedTechId] = useState('')
   const [loading, setLoading]   = useState(true)
 
   // Modals state
@@ -39,13 +42,15 @@ export default function AdminPage() {
       ticketService.getAll(),
       resourceService.getAll({}),
       notificationService.getAll(),
-    ]).then(([b, t, r, n]) => {
+      authService.getTechnicians(),
+    ]).then(([b, t, r, n, techRes]) => {
       setBookings(b.data)
       // Extract tickets from HATEOAS structure
       const ticketData = t.data._embedded?.ticketList || t.data._embedded?.tickets || (Array.isArray(t.data) ? t.data : [])
       setTickets(ticketData)
       setResources(r.data)
       setNotifications(n.data)
+      setTechnicians(techRes.data)
     }).catch(() => toast.error('Failed to load data'))
     .finally(() => setLoading(false))
   }, [])
@@ -71,15 +76,21 @@ export default function AdminPage() {
   }
 
   const handleAssignTicket = async (id) => {
-    const technicianId   = window.prompt('Enter technician user ID:')
-    const technicianName = window.prompt('Enter technician name:')
-    if (!technicianId || !technicianName) return
+    if (!selectedTechId) {
+      toast.error('Please select a technician')
+      return
+    }
+    const tech = technicians.find(t => t.id === selectedTechId)
+    if (!tech) return
+
     try {
-      await ticketService.assign(id, technicianId, technicianName)
+      await ticketService.assign(id, tech.id, tech.name)
       toast.success('Technician assigned')
       const res = await ticketService.getAll()
       const ticketData = res.data._embedded?.ticketList || res.data._embedded?.tickets || (Array.isArray(res.data) ? res.data : [])
       setTickets(ticketData)
+      setAssigningTicketId(null)
+      setSelectedTechId('')
     } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
   }
 
@@ -258,12 +269,29 @@ export default function AdminPage() {
                       )}
                     </div>
                     {!t.assignedTo && t.status === 'OPEN' && (
-                      <button
-                        onClick={() => handleAssignTicket(t.id)}
-                        className="btn-secondary text-sm flex-shrink-0"
-                      >
-                        Assign
-                      </button>
+                      assigningTicketId === t.id ? (
+                        <div className="flex gap-2 items-center flex-shrink-0">
+                          <select
+                            className="input py-1 text-sm min-w-[150px]"
+                            value={selectedTechId}
+                            onChange={(e) => setSelectedTechId(e.target.value)}
+                          >
+                            <option value="" disabled>Select Tech</option>
+                            {technicians.map(tech => (
+                              <option key={tech.id} value={tech.id}>{tech.name}</option>
+                            ))}
+                          </select>
+                          <button onClick={() => handleAssignTicket(t.id)} className="btn-primary text-sm px-3 py-1">Save</button>
+                          <button onClick={() => setAssigningTicketId(null)} className="btn-secondary text-sm px-3 py-1">Cancel</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAssigningTicketId(t.id)}
+                          className="btn-secondary text-sm flex-shrink-0"
+                        >
+                          Assign
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

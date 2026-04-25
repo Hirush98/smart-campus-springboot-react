@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout, isAdmin, isTechnician } = useAuth()
   const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState([])
@@ -97,11 +97,11 @@ export default function Navbar() {
         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
     }`
 
-  const roleLabel = user?.roles?.map(role => role.authority)?.includes('ROLE_ADMIN')
-    ? 'Admin'
-    : user?.roles?.map(role => role.authority)?.includes('ROLE_TECHNICIAN')
-      ? 'Technician'
-      : 'User'
+  const roleLabel = isAdmin
+    ? 'Administrator'
+    : isTechnician
+      ? 'Maintenance Tech'
+      : 'Academic User'
 
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
