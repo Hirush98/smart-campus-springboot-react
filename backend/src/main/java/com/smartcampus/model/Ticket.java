@@ -66,6 +66,9 @@ public class Ticket {
     @Size(max = 3, message = "Maximum 3 attachments allowed")
     private List<String> attachmentIds;
 
+    @org.springframework.data.annotation.Transient
+    private List<String> attachmentUrls;
+
     private String resolutionNotes;
     private String rejectionReason;
 

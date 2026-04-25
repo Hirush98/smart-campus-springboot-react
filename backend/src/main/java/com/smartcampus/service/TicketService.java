@@ -29,20 +29,28 @@ public class TicketService {
     private final FileStorageService fileStorageService;
 
     public List<Ticket> getAllTickets() {
-        return ticketRepository.findAll();
+        List<Ticket> tickets = ticketRepository.findAll();
+        tickets.forEach(this::populateAttachmentUrls);
+        return tickets;
     }
 
     public List<Ticket> getTicketsByUser(String userId) {
-        return ticketRepository.findByReportedBy(userId);
+        List<Ticket> tickets = ticketRepository.findByReportedBy(userId);
+        tickets.forEach(this::populateAttachmentUrls);
+        return tickets;
     }
 
     public List<Ticket> getTicketsByAssignee(String userId) {
-        return ticketRepository.findByAssignedTo(userId);
+        List<Ticket> tickets = ticketRepository.findByAssignedTo(userId);
+        tickets.forEach(this::populateAttachmentUrls);
+        return tickets;
     }
 
     public Ticket getTicketById(String id) {
-        return ticketRepository.findById(id)
+        Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + id));
+        populateAttachmentUrls(ticket);
+        return ticket;
     }
 
     public Ticket createTicket(Ticket ticket, List<org.springframework.web.multipart.MultipartFile> files) {
@@ -58,7 +66,9 @@ public class TicketService {
         }
         
         ticket.setStatus(TicketStatus.OPEN);
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+        populateAttachmentUrls(saved);
+        return saved;
     }
 
     public void deleteTicket(String id) {
@@ -97,6 +107,7 @@ public class TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
+        populateAttachmentUrls(saved);
         notificationService.notifyTicketStatusChanged(saved, updatedBy);
         return saved;
     }
@@ -108,7 +119,18 @@ public class TicketService {
         if (ticket.getStatus() == TicketStatus.OPEN) {
             ticket.setStatus(TicketStatus.IN_PROGRESS);
         }
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+        populateAttachmentUrls(saved);
+        return saved;
+    }
+
+    private void populateAttachmentUrls(Ticket ticket) {
+        if (ticket.getAttachmentIds() != null) {
+            List<String> urls = ticket.getAttachmentIds().stream()
+                    .map(id -> "/api/uploads/" + id.replace(" ", "%20"))
+                    .toList();
+            ticket.setAttachmentUrls(urls);
+        }
     }
 
     public Comment addComment(String ticketId, Comment comment) {
