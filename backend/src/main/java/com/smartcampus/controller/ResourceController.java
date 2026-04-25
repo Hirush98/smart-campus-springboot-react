@@ -18,12 +18,12 @@ import java.util.List;
  * Implemented by: Member 1
  *
  * Endpoints:
- *  GET    /api/resources          - list / search resources
- *  GET    /api/resources/{id}     - get one resource
- *  POST   /api/resources          - create resource (ADMIN)
- *  PUT    /api/resources/{id}     - update resource (ADMIN)
- *  PATCH  /api/resources/{id}/status - update status (ADMIN)
- *  DELETE /api/resources/{id}     - delete resource (ADMIN)
+ * GET /api/resources - list / search resources
+ * GET /api/resources/{id} - get one resource
+ * POST /api/resources - create resource (ADMIN)
+ * PUT /api/resources/{id} - update resource (ADMIN)
+ * PATCH /api/resources/{id}/status - update status (ADMIN)
+ * DELETE /api/resources/{id} - delete resource (ADMIN)
  */
 @RestController
 @RequestMapping("/api/resources")
@@ -39,8 +39,7 @@ public class ResourceController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) Integer minCapacity) {
         return ResponseEntity.ok(
-                resourceService.searchResources(type, status, location, minCapacity)
-        );
+                resourceService.searchResources(type, status, location, minCapacity));
     }
 
     @GetMapping("/{id}")
@@ -69,6 +68,24 @@ public class ResourceController {
             @PathVariable String id,
             @RequestParam ResourceStatus status) {
         return ResponseEntity.ok(resourceService.updateResourceStatus(id, status));
+    }
+
+    @PostMapping("/{id}/images")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Resource> uploadImages(
+            @PathVariable String id,
+            @RequestParam("files") List<org.springframework.web.multipart.MultipartFile> files) {
+
+        return ResponseEntity.ok(resourceService.addImages(id, files));
+    }
+
+    @DeleteMapping("/{id}/images")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Resource> deleteImage(
+            @PathVariable String id,
+            @RequestParam String imageUrl) {
+
+        return ResponseEntity.ok(resourceService.deleteImage(id, imageUrl));
     }
 
     @DeleteMapping("/{id}")

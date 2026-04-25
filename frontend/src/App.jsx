@@ -10,6 +10,7 @@ import BookingsPage     from './pages/BookingsPage'
 import TicketsPage      from './pages/TicketsPage'
 import NotificationsPage from './pages/NotificationsPage'
 import AdminPage        from './pages/AdminPage'
+import ResourceDetailsPage from './pages/ResourceDetailsPage'
 
 export default function App() {
   return (
@@ -23,6 +24,11 @@ export default function App() {
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardPage /></ProtectedRoute>
         } />
+
+        <Route path="/resources/:id" element={
+          <ProtectedRoute><ResourceDetailsPage /></ProtectedRoute>
+        } />
+
         <Route path="/resources" element={
           <ProtectedRoute><ResourcesPage /></ProtectedRoute>
         } />

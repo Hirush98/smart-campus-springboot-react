@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { bookingService, ticketService, resourceService } from '../services/api'
 import Layout from '../components/layout/Layout'
 import toast from 'react-hot-toast'
+import ResourceModal from '../components/resources/ResourceModal'
+import QRModal from '../components/resources/QRModal'
+import ImageUploadManager from '../components/resources/ImageUploadManager'
 
 export default function AdminPage() {
   const [tab, setTab]           = useState('bookings')
@@ -9,6 +12,11 @@ export default function AdminPage() {
   const [tickets, setTickets]   = useState([])
   const [resources, setResources] = useState([])
   const [loading, setLoading]   = useState(true)
+
+  // Modals state
+  const [showResourceModal, setShowResourceModal] = useState(false)
+  const [showQRModal, setShowQRModal]             = useState(false)
+  const [selectedResource, setSelectedResource]   = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -55,6 +63,48 @@ export default function AdminPage() {
       const res = await ticketService.getAll()
       const ticketData = res.data._embedded?.ticketList || res.data._embedded?.tickets || (Array.isArray(res.data) ? res.data : [])
       setTickets(ticketData)
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
+  }
+
+  // ── Resource Handlers ──────────────────────────────────────────────────────
+
+  const fetchResources = async () => {
+    const res = await resourceService.getAll({})
+    setResources(res.data)
+  }
+
+  const handleCreateResource = async (data) => {
+    try {
+      await resourceService.create(data)
+      toast.success('Resource created')
+      setShowResourceModal(false)
+      fetchResources()
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
+  }
+
+  const handleUpdateResource = async (data) => {
+    try {
+      await resourceService.update(selectedResource.id, data)
+      toast.success('Resource updated')
+      setShowResourceModal(false)
+      fetchResources()
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
+  }
+
+  const handleDeleteResource = async (id) => {
+    if (!window.confirm('Are you sure? This will delete all bookings and images for this resource.')) return
+    try {
+      await resourceService.delete(id)
+      toast.success('Resource deleted')
+      fetchResources()
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
+  }
+
+  const handleSetStatus = async (id, status) => {
+    try {
+      await resourceService.setStatus(id, status)
+      toast.success(`Status updated to ${status}`)
+      fetchResources()
     } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
   }
 
@@ -171,24 +221,92 @@ export default function AdminPage() {
 
           {/* Resources tab */}
           {tab === 'resources' && (
-            <div className="space-y-3">
-              {resources.map(r => (
-                <div key={r.id} className="card flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{r.name}</h3>
-                    <p className="text-sm text-gray-500">{r.type} · {r.location}</p>
-                    <p className="text-xs font-mono text-gray-400 mt-0.5">{r.id}</p>
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <button 
+                  onClick={() => { setSelectedResource(null); setShowResourceModal(true) }}
+                  className="btn-primary text-sm"
+                >
+                  + Add Resource
+                </button>
+              </div>
+
+              {resources.length === 0 ? (
+                <p className="text-gray-400 text-center py-12">No resources.</p>
+              ) : resources.map(r => (
+                <div key={r.id} className="card">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{r.name}</h3>
+                        <p className="text-sm text-gray-500">{r.type} · {r.location}</p>
+                        <p className="text-xs font-mono text-gray-400 mt-0.5">{r.id}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <select 
+                          className={`badge border-none outline-none cursor-pointer
+                            ${r.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                              r.status === 'OUT_OF_SERVICE' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'}`}
+                          value={r.status}
+                          onChange={(e) => handleSetStatus(r.id, e.target.value)}
+                        >
+                          <option value="ACTIVE">ACTIVE</option>
+                          <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
+                          <option value="UNDER_MAINTENANCE">MAINTENANCE</option>
+                        </select>
+                        <button 
+                          onClick={() => { setSelectedResource(r); setShowQRModal(true) }}
+                          className="text-blue-600 text-xs hover:underline"
+                        >
+                          View QR Code
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Image manager for existing resource */}
+                    <div className="border-t pt-4">
+                      <ImageUploadManager 
+                        resourceId={r.id} 
+                        imageUrls={r.imageUrls} 
+                        onUpdate={fetchResources}
+                      />
+                    </div>
+
+                    <div className="flex gap-2 border-t pt-4">
+                      <button 
+                        onClick={() => { setSelectedResource(r); setShowResourceModal(true) }}
+                        className="btn-secondary text-xs px-3 py-1"
+                      >
+                        Edit Details
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteResource(r.id)}
+                        className="btn-danger text-xs px-3 py-1"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <span className={`badge
-                    ${r.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                      r.status === 'OUT_OF_SERVICE' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'}`}>
-                    {r.status}
-                  </span>
                 </div>
               ))}
             </div>
           )}
+
+          {/* Modals */}
+          <ResourceModal
+            show={showResourceModal}
+            resource={selectedResource}
+            onClose={() => setShowResourceModal(false)}
+            onSubmit={selectedResource ? handleUpdateResource : handleCreateResource}
+          />
+
+          <QRModal
+            show={showQRModal}
+            resourceId={selectedResource?.id}
+            resourceName={selectedResource?.name}
+            onClose={() => setShowQRModal(false)}
+          />
         </>
       )}
     </Layout>
