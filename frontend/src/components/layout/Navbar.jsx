@@ -5,7 +5,7 @@ import { notificationService } from '../../services/api'
 import { BellIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout, isAdmin, isTechnician } = useAuth()
   const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(0)
 
@@ -74,7 +74,7 @@ export default function Navbar() {
               <div className="hidden sm:flex flex-col items-end">
                 <span className="text-xs font-bold text-slate-900">{user?.name}</span>
                 <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                  {isAdmin ? 'Administrator' : 'Academic User'}
+                  {isAdmin ? 'Administrator' : isTechnician ? 'Maintenance Tech' : 'Academic User'}
                 </span>
               </div>
               
