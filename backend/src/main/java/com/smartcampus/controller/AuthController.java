@@ -21,18 +21,10 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Module E - Authentication & Authorization
- * Implemented by: Member 4
- *
- * Endpoints:
- *  POST /api/auth/register  - register new user
- *  POST /api/auth/login     - login with email/password → returns JWT
- *  GET  /api/auth/me        - get current logged-in user info
- */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -47,17 +39,17 @@ public class AuthController {
     public ResponseEntity<?> checkStatus() {
         try {
             long count = userRepository.count();
-            return ResponseEntity.ok(Map.of(
-                "status", "UP",
-                "database", "Connected",
-                "userCount", count
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "UP");
+            response.put("database", "Connected");
+            response.put("userCount", count);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                "status", "DOWN",
-                "database", "Disconnected",
-                "error", e.getMessage()
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "DOWN");
+            response.put("database", "Disconnected");
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
@@ -68,7 +60,6 @@ public class AuthController {
                     .body(Map.of("message", "Email is already registered"));
         }
 
-        // Simple logic for assignment demo: Assign roles based on email
         String emailLower = request.getEmail().toLowerCase();
         Set<Role> roles;
         if (emailLower.contains("admin")) {
@@ -99,16 +90,15 @@ public class AuthController {
                         request.getEmail(), request.getPassword())
         );
 
-        // Load by email for local auth
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         String token = tokenProvider.generateToken(principal);
 
-        return ResponseEntity.ok(Map.of(
-                "token", token,
-                "userId", principal.getId(),
-                "name", principal.getName(),
-                "email", principal.getEmail()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("userId", principal.getId() != null ? principal.getId() : "");
+        response.put("name", principal.getName() != null ? principal.getName() : "");
+        response.put("email", principal.getEmail() != null ? principal.getEmail() : "");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
@@ -118,22 +108,24 @@ public class AuthController {
             throw new AccessDeniedException("Unauthorized");
         }
 
-        return ResponseEntity.ok(Map.of(
-                "id", principal.getId(),
-                "name", principal.getName(),
-                "email", principal.getEmail(),
-                "roles", principal.getAuthorities()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", principal.getId() != null ? principal.getId() : "");
+        response.put("name", principal.getName() != null ? principal.getName() : "");
+        response.put("email", principal.getEmail() != null ? principal.getEmail() : "");
+        response.put("roles", principal.getAuthorities());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/technicians")
     public ResponseEntity<?> getTechnicians() {
         return ResponseEntity.ok(userRepository.findAll().stream()
                 .filter(u -> u.getRoles().contains(Role.TECHNICIAN))
-                .map(u -> Map.of(
-                        "id", u.getId(),
-                        "name", u.getName()
-                ))
+                .map(u -> {
+                    Map<String, Object> tech = new HashMap<>();
+                    tech.put("id", u.getId() != null ? u.getId() : "");
+                    tech.put("name", u.getName() != null ? u.getName() : "");
+                    return tech;
+                })
                 .toList());
     }
 

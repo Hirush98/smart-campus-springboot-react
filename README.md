@@ -169,6 +169,82 @@ npm run dev
 5. Copy Client ID and Secret into `application.properties`
 
 ---
+# Smart Campus Booking Management System
+
+## 📌 Module: Booking Management (Conflict Handling)
+
+This module is responsible for managing booking requests for campus resources. It ensures proper handling of booking conflicts and maintains a consistent booking workflow.
+
+---
+
+## 🚀 Features
+
+- Create booking requests
+- View bookings (user-specific and admin view)
+- Approve or reject bookings (Admin only)
+- Cancel bookings
+- Booking conflict handling
+- Status-based workflow (no hard deletion)
+
+---
+
+## 🔗 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|--------|------------|
+| GET | /api/bookings | Get bookings (Admin: all, User: own) |
+| GET | /api/bookings/{id} | Get booking by ID |
+| POST | /api/bookings | Create new booking |
+| PATCH | /api/bookings/{id}/approve | Approve booking (Admin) |
+| PATCH | /api/bookings/{id}/reject | Reject booking with reason (Admin) |
+| PATCH | /api/bookings/{id}/cancel | Cancel booking |
+
+---
+
+## ⚙️ Booking Workflow
+
+1. User creates booking → Status = PENDING  
+2. Admin reviews booking  
+3. Admin can:
+   - Approve → Status = APPROVED  
+   - Reject → Status = REJECTED (with reason)  
+4. User/Admin can cancel → Status = CANCELLED  
+
+---
+
+## ⚠️ Conflict Handling
+
+- System prevents conflicting bookings by controlling approval process  
+- Only valid bookings are approved  
+- Conflicting bookings are rejected with a reason  
+
+---
+
+## 🗄️ Database Design (Booking Entity)
+
+- id  
+- userId  
+- resourceId  
+- status (PENDING, APPROVED, REJECTED, CANCELLED)  
+- reason  
+- createdAt / updatedAt  
+
+---
+
+## 🔐 Security
+
+- Role-based access control  
+- Admin: approve/reject bookings  
+- User: view and manage own bookings  
+
+---
+
+## 🧠 Design Decisions
+
+- Used PATCH for partial updates  
+- Avoided DELETE to preserve booking history  
+- Used status-based lifecycle for better data consistency  
+
 
 ## Running Tests
 

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -23,24 +25,25 @@
   body {
     @apply bg-[#f8fafc] text-slate-900 antialiased font-sans selection:bg-blue-100;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 400;
   }
 }
 
 @layer components {
   .btn-primary {
     @apply bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 
-           active:scale-[0.98] transition-all duration-200 font-semibold shadow-lg shadow-blue-200
+           active:scale-[0.98] transition-all duration-200 font-medium shadow-lg shadow-blue-200
            disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none;
   }
   
   .btn-secondary {
     @apply bg-white text-slate-700 px-5 py-2.5 rounded-xl border border-slate-200
-           hover:bg-slate-50 active:scale-[0.98] transition-all duration-200 font-semibold shadow-sm;
+           hover:bg-slate-50 active:scale-[0.98] transition-all duration-200 font-medium shadow-sm;
   }
 
   .btn-danger {
     @apply bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 
-           active:scale-[0.98] transition-all duration-200 font-semibold shadow-lg shadow-rose-200;
+           active:scale-[0.98] transition-all duration-200 font-medium shadow-lg shadow-rose-200;
   }
 
   .input {
@@ -64,11 +67,11 @@
   }
 
   .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium tracking-wide uppercase;
   }
 
   .error-message {
-    @apply text-rose-500 text-xs mt-1.5 ml-1 font-medium;
+    @apply text-rose-500 text-xs mt-1.5 ml-1 font-normal;
     animation: error-in 0.2s ease-out;
   }
 }
